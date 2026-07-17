@@ -97,6 +97,20 @@ body { font-family:var(--font); color:var(--text); background:var(--bg); -webkit
 .order-item .item-time { font-size:0.7rem; color:var(--text-muted); font-family:var(--font-mono); }
 
 .order-card .card-footer { padding:0.6rem 1rem; border-top:1px solid var(--border); }
+
+/* Tasting/Prix Fixe course styling */
+.order-card.tasting-course { border-color:var(--info); }
+.order-card.tasting-course .card-header { background:rgba(96,165,250,0.08); }
+.tasting-badge {
+  display:inline-block; font-size:0.6rem; font-weight:700; text-transform:uppercase;
+  letter-spacing:0.08em; padding:0.15rem 0.5rem; border-radius:4px;
+  background:rgba(96,165,250,0.15); color:var(--info); margin-left:0.5rem;
+}
+.course-label {
+  font-size:0.7rem; color:var(--info); font-weight:600; text-transform:uppercase;
+  letter-spacing:0.05em; padding:0.3rem 1rem 0;
+}
+.pf-choices { font-size:0.7rem; color:var(--text-sec); padding:0 1rem 0.3rem; font-style:italic; }
 .bump-btn {
   width:100%; padding:0.7rem; border:none; border-radius:8px;
   background:var(--success); color:var(--bg); font-size:0.85rem; font-weight:700;
@@ -245,10 +259,14 @@ function renderOrders() {
   var c=document.getElementById('kds-content');
   var orders=STATE.orders;
   if (STATE.station!=='All') {
-    orders=orders.filter(o=>o.items&&o.items.some(i=>i.station===STATE.station));
+    orders=orders.filter(o=>{
+      if (o.items&&o.items.some(i=>i.station===STATE.station)) return true;
+      if (o.tastingCourse&&o.tastingCourse.station===STATE.station) return true;
+      return false;
+    });
   }
   if (!orders.length) {
-    c.innerHTML='<div class="empty-state"><div class="icon">✓</div><p>All clear — no active orders</p></div>';
+    c.innerHTML='<div class="empty-state"><div class="icon">\u2713</div><p>All clear \u2014 no active orders</p></div>';
     return;
   }
   c.innerHTML='<div class="order-grid">'+orders.map(o=>{
@@ -256,9 +274,31 @@ function renderOrders() {
     var mins=Math.floor(elapsed/60); var secs=elapsed%60;
     var timerCls=mins>=15?'critical':mins>=10?'warn':'';
     var urgent=mins>=15;
+    var isTasting=!!o.tastingCourse;
+    var cardCls='order-card'+(urgent?' urgent':'')+(isTasting?' tasting-course':'');
+    if (isTasting) {
+      var tc=o.tastingCourse;
+      var courseInfo=tc.courseNum?('Course '+tc.courseNum+'/'+tc.totalCourses):'';
+      var badge='<span class="tasting-badge">'+(tc.type==='prix_fixe'?'Prix Fixe':'Tasting')+'</span>';
+      var choicesHtml=tc.choices?'<div class="pf-choices">Choices: '+tc.choices+'</div>':'';
+      return '<div class="'+cardCls+'">'+
+        '<div class="card-header">'+
+          '<div><span class="table-badge">T'+o.table+'</span> <span class="server-name">'+o.server+'</span>'+badge+'</div>'+
+          '<span class="timer '+timerCls+'" data-sent="'+o.sentAt+'">'+pad(mins)+':'+pad(secs)+'</span>'+
+        '</div>'+
+        (courseInfo?'<div class="course-label">'+tc.menuName+' \u2014 '+courseInfo+'</div>':'')+
+        choicesHtml+
+        '<div class="card-items">'+
+          '<div class="order-item"><div><div class="item-name">'+tc.courseName+'</div>'+
+          (tc.description?'<div class="item-mod">'+tc.description+'</div>':'')+
+          '</div><div class="item-time">'+tc.station+'</div></div>'+
+        '</div>'+
+        '<div class="card-footer"><button class="bump-btn" onclick="bumpOrder(\''+o.id+'\')">'+'BUMP \u2713</button></div>'+
+      '</div>';
+    }
     var items=(o.items||[]);
     if (STATE.station!=='All') items=items.filter(i=>i.station===STATE.station);
-    return '<div class="order-card'+(urgent?' urgent':'')+'">'+
+    return '<div class="'+cardCls+'">'+
       '<div class="card-header">'+
         '<div><span class="table-badge">T'+o.table+'</span> <span class="server-name">'+o.server+'</span></div>'+
         '<span class="timer '+timerCls+'" data-sent="'+o.sentAt+'">'+pad(mins)+':'+pad(secs)+'</span>'+
@@ -268,7 +308,7 @@ function renderOrders() {
         (i.selectedMod?'<div class="item-mod">'+i.selectedMod+'</div>':'')+
         '</div><div class="item-time">'+i.cookTime+'m</div></div>'
       ).join('')+'</div>'+
-      '<div class="card-footer"><button class="bump-btn" onclick="bumpOrder(\''+o.id+'\')">BUMP ✓</button></div>'+
+      '<div class="card-footer"><button class="bump-btn" onclick="bumpOrder(\''+o.id+'\')">'+'BUMP \u2713</button></div>'+
     '</div>';
   }).join('')+'</div>';
 }
