@@ -455,7 +455,7 @@ function renderOrders() {
       '<div class="card-items">'+items.map(i=>
         '<div class="order-item"><div><div class="item-name">'+i.name+'</div>'+
         (i.selectedMod?'<div class="item-mod">'+i.selectedMod+'</div>':'')+
-        '</div><div class="item-time">'+(i.cookTime||i.cookMin||((STATE.menuItems.find(function(m){return m.id===i.id;})||{}).cookMin)||0)+'m</div></div>
+        '</div><div class="item-time">'+(i.cookTime||i.cookMin||((STATE.menuItems.find(function(m){return m.id===i.id;})||{}).cookMin)||0)+'m</div></div>'
       ).join('')+'</div>'+
       '<div class="card-footer"><button class="bump-btn" onclick="bumpOrder(\''+o.id+'\')">'+'BUMP \u2713</button></div>'+
     '</div>';
