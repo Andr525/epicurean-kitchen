@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ff<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -317,7 +317,7 @@ function createNamedFirestoreAdapter(){
 
 if (typeof fbReady !== 'undefined' && fbReady) fbDb = createNamedFirestoreAdapter();
 // ─── State ──────────────────────────────────────────────────────
-var STATE = { orders:[], station:'All' };
+var STATE = { orders:[], menuItems:[], station:'All' };
 var STATIONS = ['All','Grill','Sauté','Fry','Cold/Garde Manger','Pastry','Bar','Expo'];
 var KITCHEN_CODES = ['1001','5001','EPICUREAN2024']; // kitchen + manager + owner
 
@@ -355,6 +355,7 @@ function kdsAttempt() {
 // ─── KDS ────────────────────────────────────────────────────────
 function startKDS() {
   renderStationTabs();
+  loadMenu();
   loadOrders();
   setInterval(updateTimers,1000);
   updateClock();
@@ -372,6 +373,18 @@ function renderStationTabs() {
 }
 
 function setStation(s) { STATE.station=s; renderStationTabs(); renderOrders(); }
+
+function loadMenu() {
+  if (!fbReady) return;
+  fbDb.collection('boh_shared').doc('menu').onSnapshot(function(doc){
+    var data = doc.exists && doc.data() || {};
+    STATE.menuItems = Array.isArray(data.items) ? data.items : [];
+    renderOrders();
+  }, function(error){
+    console.warn('Menu read failed:', error);
+    STATE.menuItems = [];
+  });
+}
 
 function loadOrders() {
   if (!fbReady) return;
@@ -442,7 +455,7 @@ function renderOrders() {
       '<div class="card-items">'+items.map(i=>
         '<div class="order-item"><div><div class="item-name">'+i.name+'</div>'+
         (i.selectedMod?'<div class="item-mod">'+i.selectedMod+'</div>':'')+
-        '</div><div class="item-time">'+i.cookTime+'m</div></div>'
+        '</div><div class="item-time">'+(i.cookTime||i.cookMin||((STATE.menuItems.find(function(m){return m.id===i.id;})||{}).cookMin)||0)+'m</div></div>
       ).join('')+'</div>'+
       '<div class="card-footer"><button class="bump-btn" onclick="bumpOrder(\''+o.id+'\')">'+'BUMP \u2713</button></div>'+
     '</div>';
