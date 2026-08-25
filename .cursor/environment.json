@@ -1,6 +1,12 @@
 {
   "name": "epicurean-kitchen",
   "install": "python3 --version",
+  "repositoryDependencies": [
+    "github.com/Andr525/epicurean-boh",
+    "github.com/Andr525/epicurean-pos",
+    "github.com/Andr525/epicurean-names",
+    "github.com/Andr525/epicurean-clock"
+  ],
   "terminals": [
     {
       "name": "static-server",
