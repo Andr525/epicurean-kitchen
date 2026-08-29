@@ -461,6 +461,12 @@ function renderOrders() {
       '<div class="card-items">'+items.map(i=>
         '<div class="order-item"><div><div class="item-name">'+i.name+'</div>'+
         (i.selectedMod?'<div class="item-mod">'+i.selectedMod+'</div>':'')+
+        (i.notes?'<div class="item-mod">NOTE: '+i.notes+'</div>':'')+
+        ((i.seat&&i.seat!=='table')||i.course||(i.allergens&&i.allergens.length)?'<div class="item-mod">'+
+          (i.seat&&i.seat!=='table'?'Seat '+i.seat:'Table')+
+          (i.course?' · Course '+i.course:'')+
+          (i.allergens&&i.allergens.length?' · ⚠ '+[].concat(i.allergens).join(', '):'')+
+        '</div>':'')+
         '</div><div class="item-time">'+(i.cookTime||i.cookMin||((STATE.menuItems.find(function(m){return m.id===i.id;})||{}).cookMin)||0)+'m</div></div>'
       ).join('')+'</div>'+
       '<div class="card-footer"><button class="bump-btn" onclick="bumpOrder(\''+o.id+'\')">'+'BUMP \u2713</button></div>'+
