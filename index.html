@@ -430,6 +430,7 @@ function renderOrders() {
     var timerCls=mins>=15?'critical':mins>=10?'warn':'';
     var urgent=mins>=15;
     var isTasting=!!o.tastingCourse;
+    var isIpad=o.type==='ipad_guest_order';
     var cardCls='order-card'+(urgent?' urgent':'')+(isTasting?' tasting-course':'');
     if (isTasting) {
       var tc=o.tastingCourse;
@@ -457,9 +458,10 @@ function renderOrders() {
     if (STATE.station!=='All') items=items.filter(i=>i.station===STATE.station);
     return '<div class="'+cardCls+'">'+
       '<div class="card-header">'+
-        '<div><span class="table-badge">T'+o.table+'</span> <span class="server-name">'+o.server+'</span></div>'+
+        '<div><span class="table-badge">T'+o.table+'</span> <span class="server-name">'+o.server+'</span>'+(isIpad?'<span class="tasting-badge">iPad</span>':'')+'</div>'+
         '<span class="timer '+timerCls+'" data-sent="'+o.sentAt+'">'+pad(mins)+':'+pad(secs)+'</span>'+
       '</div>'+
+      (o.guestNote && isIpad ? '<div class="course-label">English for Food Master</div>' : '')+
       '<div class="card-items">'+items.map(i=>
         '<div class="order-item"><div><div class="item-name">'+i.name+'</div>'+
         (i.selectedMod?'<div class="item-mod">'+i.selectedMod+'</div>':'')+
