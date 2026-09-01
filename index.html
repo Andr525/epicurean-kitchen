@@ -446,6 +446,8 @@ function renderOrders() {
         '<div class="card-items">'+
           '<div class="order-item"><div><div class="item-name">'+tc.courseName+'</div>'+
           (tc.description?'<div class="item-mod">'+tc.description+'</div>':'')+
+          ((tc.allergens&&tc.allergens.length)?'<div class="item-mod">⚠ '+[].concat(tc.allergens).join(', ')+'</div>':'')+
+          (tc.cookNote?'<div class="item-mod">NOTE: '+tc.cookNote+'</div>':'')+
           '</div><div class="item-time">'+tc.station+'</div></div>'+
         '</div>'+
         '<div class="card-footer"><button class="bump-btn" onclick="bumpOrder(\''+o.id+'\')">'+'BUMP \u2713</button></div>'+
