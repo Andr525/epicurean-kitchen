@@ -11,6 +11,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore-compat.js"></script>
+<script src="scalini-dining.js?v=print-btg-20260909"></script>
 <style>
 :root {
   --bg: #0a0a0f;
@@ -380,15 +381,40 @@ function renderStationTabs() {
 
 function setStation(s) { STATE.station=s; renderStationTabs(); renderOrders(); }
 
+function mergeScaliniBtgKitchen(){
+  var btg=(typeof EPICUREAN_SCALINI!=='undefined' && EPICUREAN_SCALINI.winesByGlass) || [];
+  var seen={};
+  (STATE.menuItems||[]).forEach(function(it){ if (it && it.id) seen[it.id]=true; });
+  btg.forEach(function(w){
+    if (!w || !w.id || seen[w.id]) return;
+    STATE.menuItems.push({
+      id:w.id,
+      name:w.name,
+      station:'Bar',
+      cookMin:0,
+      price:w.glassPrice
+    });
+  });
+}
+function kitchenItemTime(i){
+  var menu=(STATE.menuItems||[]).filter(function(m){ return m.id===i.id; })[0]||{};
+  var station=i.station || menu.station || '';
+  if (String(station).toLowerCase()==='bar' || String(i.id||'').indexOf('btg_')===0) {
+    return i.selectedMod ? String(i.selectedMod) : 'BAR';
+  }
+  return (i.cookTime||i.cookMin||menu.cookMin||0)+'m';
+}
 function loadMenu() {
   if (!fbReady) return;
   fbDb.collection('boh_shared').doc('menu').onSnapshot(function(doc){
     var data = doc.exists && doc.data() || {};
     STATE.menuItems = Array.isArray(data.items) ? data.items : [];
+    mergeScaliniBtgKitchen();
     renderOrders();
   }, function(error){
     console.warn('Menu read failed:', error);
     STATE.menuItems = [];
+    mergeScaliniBtgKitchen();
   });
 }
 
@@ -471,7 +497,7 @@ function renderOrders() {
           (i.course?' · Course '+i.course:'')+
           (i.allergens&&i.allergens.length?' · ⚠ '+[].concat(i.allergens).join(', '):'')+
         '</div>':'')+
-        '</div><div class="item-time">'+(i.cookTime||i.cookMin||((STATE.menuItems.find(function(m){return m.id===i.id;})||{}).cookMin)||0)+'m</div></div>'
+        '</div><div class="item-time">'+kitchenItemTime(i)+'</div></div>'
       ).join('')+'</div>'+
       '<div class="card-footer"><button class="bump-btn" onclick="bumpOrder(\''+o.id+'\')">'+'BUMP \u2713</button></div>'+
     '</div>';
