@@ -46,6 +46,8 @@ body { font-family:var(--font); color:var(--text); background:var(--bg); -webkit
 .kds-header .clock { font-family:var(--font-mono); font-size:1rem; color:var(--text-sec); }
 .kds-header .order-count { font-size:0.8rem; color:var(--text-muted); }
 
+.order-card.hold { border:2px dashed #facc15; background:rgba(250,204,21,.07); }
+.hold-banner { background:#facc15; color:#422006; font-weight:800; font-size:.75rem; letter-spacing:.06em; padding:.3rem .6rem; text-align:center; }
 .station-tabs {
   display:flex; gap:0; overflow-x:auto; background:var(--surface);
   border-bottom:1px solid var(--border); flex-shrink:0; scrollbar-width:none;
@@ -325,7 +327,30 @@ function createNamedFirestoreAdapter(){
 if (typeof fbReady !== 'undefined' && fbReady) fbDb = createNamedFirestoreAdapter();
 // ─── State ──────────────────────────────────────────────────────
 var STATE = { orders:[], menuItems:[], station:'All' };
-var STATIONS = ['All','Grill','Sauté','Fry','Cold/Garde Manger','Pastry','Bar','Expo'];
+var STATIONS = ['All','Grill','Sauté','Fry','Cold/Garde Manger','Pastry','Bar','Coffee','Expo'];
+function normSt(x){ return String(x||'').toLowerCase().replace(/[^a-z]/g,''); }
+function isDrinkSt(st){ return /^(bar|coffee)$/i.test(String(st||'')); }
+function seatRank(it){
+  var m=String(it.seat||'').match(/^(\d+)(A?)$/);
+  if (!m) return 9999;
+  return (m[2]?0:1000)+parseInt(m[1],10);
+}
+// Items of an order that belong on the screen currently selected.
+function itemsForView(o){
+  var items=(o.items||[]);
+  var st=STATE.station;
+  if (st==='All') return items.filter(function(i){ return !isDrinkSt(i.station); });
+  if (st==='Expo') return items.filter(function(i){ return normSt(i.station)==='expo' || i.preview; });
+  return items.filter(function(i){ return normSt(i.station)===normSt(st) && !i.preview; });
+}
+function orderInView(o){
+  if (o.tastingCourse) {
+    var ts=o.tastingCourse.station;
+    if (STATE.station==='All') return !isDrinkSt(ts);
+    return normSt(ts)===normSt(STATE.station);
+  }
+  return itemsForView(o).length>0;
+}
 var KITCHEN_CODES = ['1001','5001','EPICUREAN2024']; // kitchen + manager + owner
 
 // ─── Login ──────────────────────────────────────────────────────
@@ -372,7 +397,9 @@ function startKDS() {
 function renderStationTabs() {
   var tabs=document.getElementById('station-tabs');
   tabs.innerHTML=STATIONS.map(s=>{
-    var count=s==='All'?STATE.orders.length:STATE.orders.filter(o=>o.items&&o.items.some(i=>i.station===s)).length;
+    var save=STATE.station; STATE.station=s;
+    var count=STATE.orders.filter(orderInView).length;
+    STATE.station=save;
     return '<div class="station-tab'+(s===STATE.station?' active':'')+'" onclick="setStation(\''+s+'\')">'+s+
       (count?'<span class="tab-count">'+count+'</span>':'')+
     '</div>';
@@ -439,13 +466,7 @@ function loadOrders() {
 function renderOrders() {
   var c=document.getElementById('kds-content');
   var orders=STATE.orders;
-  if (STATE.station!=='All') {
-    orders=orders.filter(o=>{
-      if (o.items&&o.items.some(i=>i.station===STATE.station)) return true;
-      if (o.tastingCourse&&o.tastingCourse.station===STATE.station) return true;
-      return false;
-    });
-  }
+  orders=orders.filter(orderInView);
   if (!orders.length) {
     c.innerHTML='<div class="empty-state"><div class="icon">\u2713</div><p>All clear \u2014 no active orders</p></div>';
     return;
@@ -480,13 +501,14 @@ function renderOrders() {
         '<div class="card-footer"><button class="bump-btn" onclick="bumpOrder(\''+o.id+'\')">'+'BUMP \u2713</button></div>'+
       '</div>';
     }
-    var items=(o.items||[]);
-    if (STATE.station!=='All') items=items.filter(i=>i.station===STATE.station);
+    var items=itemsForView(o).slice().sort(function(a,b){ return seatRank(a)-seatRank(b); });
+    if (o.overview) cardCls+=' hold';
     return '<div class="'+cardCls+'">'+
       '<div class="card-header">'+
         '<div><span class="table-badge">T'+o.table+'</span> <span class="server-name">'+o.server+'</span>'+(isIpad?'<span class="tasting-badge">iPad</span>':'')+'</div>'+
         '<span class="timer '+timerCls+'" data-sent="'+o.sentAt+'">'+pad(mins)+':'+pad(secs)+'</span>'+
       '</div>'+
+      (o.overview ? '<div class="hold-banner">ORDER TAKEN \u2014 ON HOLD \u00B7 not fired yet</div>' : '')+
       (o.guestNote && isIpad ? '<div class="course-label">English for Food Master</div>' : '')+
       '<div class="card-items">'+items.map(i=>
         '<div class="order-item"><div><div class="item-name">'+i.name+'</div>'+
@@ -497,7 +519,7 @@ function renderOrders() {
           (i.course?' · Course '+i.course:'')+
           (i.allergens&&i.allergens.length?' · ⚠ '+[].concat(i.allergens).join(', '):'')+
         '</div>':'')+
-        '</div><div class="item-time">'+kitchenItemTime(i)+'</div></div>'
+        '</div><div class="item-time">'+(i.preview?(i.station||''):kitchenItemTime(i))+'</div></div>'
       ).join('')+'</div>'+
       '<div class="card-footer"><button class="bump-btn" onclick="bumpOrder(\''+o.id+'\')">'+'BUMP \u2713</button></div>'+
     '</div>';
