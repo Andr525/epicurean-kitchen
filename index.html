@@ -147,8 +147,24 @@ body { font-family:var(--font); color:var(--text); background:var(--bg); -webkit
 .login-overlay .nbtn.act { font-size:0.8rem; color:var(--text-sec); }
 #kds-pin-error { color:var(--danger); font-size:0.8rem; margin-top:0.8rem; min-height:1.2rem; }
 
-@media (max-width:768px) { .order-grid { grid-template-columns:1fr; } }
-@media (min-width:1400px) { .order-grid { grid-template-columns:repeat(4,1fr); } }
+@media (max-width:480px) { .order-grid { grid-template-columns:1fr!important; } }
+
+
+/* ---- compact tickets (Toast/Lightspeed-style dense grid) ---- */
+.order-grid{grid-template-columns:repeat(auto-fill,minmax(215px,1fr))!important;gap:.5rem!important;align-items:start}
+.order-card .card-header{padding:.35rem .6rem!important}
+.order-card .table-badge{font-size:1.05rem!important}
+.order-card .card-items{padding:.3rem .6rem!important}
+.order-item{padding:.25rem 0!important}
+.order-item .item-name{font-size:.95rem!important;font-weight:700!important;line-height:1.15}
+.order-item .item-mod{font-size:.74rem!important;line-height:1.2}
+.order-card .card-footer{padding:.3rem .5rem!important}
+.bump-btn{padding:.4rem!important;font-size:.85rem!important;min-height:34px}
+.course-label{padding:.15rem .6rem!important;font-size:.72rem!important}
+.seat-chip{display:inline-block;background:#1e293b;border:1px solid #475569;border-radius:6px;padding:0 .35rem;font-weight:800;font-size:.8rem;margin-right:.3rem}
+.seat-chip.lady{background:#7c2d12;border-color:#fb923c;color:#ffedd5}
+.stn-tag{font-size:.66rem;color:var(--text-muted);margin-left:.3rem}
+.alg{color:#fb923c;font-weight:700}
 </style>
 </head>
 <body>
@@ -482,14 +498,16 @@ function renderOrders() {
     if (isTasting) {
       var tc=o.tastingCourse;
       var courseInfo=tc.courseNum?('Course '+tc.courseNum+'/'+tc.totalCourses):'';
+      var seatId=String(tc.position||o.position||'');
+      var seatChip=seatId?'<span class="seat-chip'+(/A$/.test(seatId)?' lady':'')+'">'+seatId+'</span>':'';
       var badge='<span class="tasting-badge">'+(tc.type==='prix_fixe'?'Prix Fixe':'Tasting')+'</span>';
-      var choicesHtml=tc.choices?'<div class="pf-choices">Choices: '+tc.choices+'</div>':'';
+      var choicesHtml='';
       return '<div class="'+cardCls+'">'+
         '<div class="card-header">'+
           '<div><span class="table-badge">T'+o.table+'</span> <span class="server-name">'+o.server+'</span>'+badge+'</div>'+
           '<span class="timer '+timerCls+'" data-sent="'+o.sentAt+'">'+pad(mins)+':'+pad(secs)+'</span>'+
         '</div>'+
-        (courseInfo?'<div class="course-label">'+tc.menuName+' \u2014 '+courseInfo+'</div>':'')+
+        (courseInfo?'<div class="course-label">'+seatChip+tc.menuName+' \u00B7 '+courseInfo+'</div>':'')+
         choicesHtml+
         '<div class="card-items">'+
           '<div class="order-item"><div><div class="item-name">'+tc.courseName+'</div>'+
@@ -515,9 +533,9 @@ function renderOrders() {
         (i.selectedMod?'<div class="item-mod">'+i.selectedMod+'</div>':'')+
         (i.notes?'<div class="item-mod">NOTE: '+i.notes+'</div>':'')+
         ((i.seat&&i.seat!=='table')||i.course||(i.allergens&&i.allergens.length)?'<div class="item-mod">'+
-          (i.seat&&i.seat!=='table'?'Seat '+i.seat:'Table')+
-          (i.course?' · Course '+i.course:'')+
-          (i.allergens&&i.allergens.length?' · ⚠ '+[].concat(i.allergens).join(', '):'')+
+          (i.seat&&i.seat!=='table'?'<span class="seat-chip'+(/A$/.test(String(i.seat))?' lady':'')+'">'+i.seat+'</span>':'Table')+
+          (i.course?'C'+i.course:'')+
+          (i.allergens&&i.allergens.length?' <span class="alg">⚠ '+[].concat(i.allergens).join(', ')+'</span>':'')+
         '</div>':'')+
         '</div><div class="item-time">'+(i.preview?(i.station||''):kitchenItemTime(i))+'</div></div>'
       ).join('')+'</div>'+
