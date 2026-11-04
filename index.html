@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#f3f4f6">
-<title>Epicurean Kitchen Display</title><!-- build Nov4-b -->
+<title>Epicurean Kitchen Display</title><!-- build Nov4-c -->
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-auth-compat.js"></script>
@@ -261,7 +261,7 @@ body{background:#f3f4f6;color:#111827;font-family:'Inter',-apple-system,sans-ser
 <div class="login-overlay" id="kds-login">
   <div>
     <h1 id="kds-login-title">Kitchen Display</h1>
-    <p class="sub">Enter kitchen code</p>
+    <p class="sub" id="kds-login-sub">Enter kitchen code</p>
     <div class="pin-row" id="kds-pin-dots">
       <div class="pin-d"></div><div class="pin-d"></div><div class="pin-d"></div><div class="pin-d"></div>
     </div>
@@ -888,7 +888,7 @@ function updateClock() {
 }
 
 // ─── Init ───────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', function(){ buildKdsNumpad(); var t=document.getElementById('kds-login-title'); if(t) t.textContent=SCREEN_TITLE+' Display'; document.title=SCREEN_TITLE+' Display'; });
+document.addEventListener('DOMContentLoaded', function(){ buildKdsNumpad(); var t=document.getElementById('kds-login-title'); if(t) t.textContent=SCREEN_TITLE+' Display'; var sb=document.getElementById('kds-login-sub'); if(sb) sb.textContent='Enter '+SCREEN_TITLE.toLowerCase()+' code'; document.title=SCREEN_TITLE+' Display'; });
 
 </script>
 </body>
