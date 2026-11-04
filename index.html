@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#f3f4f6">
-<title>Epicurean Kitchen Display</title><!-- build Nov4-a -->
+<title>Epicurean Kitchen Display</title><!-- build Nov4-b -->
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-auth-compat.js"></script>
@@ -888,7 +888,7 @@ function updateClock() {
 }
 
 // ─── Init ───────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', function(){ buildKdsNumpad(); });
+document.addEventListener('DOMContentLoaded', function(){ buildKdsNumpad(); var t=document.getElementById('kds-login-title'); if(t) t.textContent=SCREEN_TITLE+' Display'; document.title=SCREEN_TITLE+' Display'; });
 
 </script>
 </body>
