@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#f3f4f6">
-<title>Epicurean Kitchen Display</title><!-- build Nov4-c -->
+<title>Epicurean Kitchen Display</title><!-- build Nov6-b -->
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-auth-compat.js"></script>
@@ -427,6 +427,8 @@ function createNamedFirestoreAdapter(){
   return {collection:collection};
 }
 
+if (typeof fbReady !== 'undefined' && fbReady) fbDb = createNamedFirestoreAdapter();
+
 // ─── Screen mode: ?screen=kitchen (default) | bar | coffee ───────
 var SCREEN = (function(){ try { var s=(new URLSearchParams(location.search).get('screen')||'kitchen').toLowerCase(); return (s==='bar'||s==='coffee')?s:'kitchen'; } catch(e){ return 'kitchen'; } })();
 var SCREEN_TITLE = { kitchen:'Kitchen', bar:'Bar', coffee:'Coffee' }[SCREEN];
@@ -448,12 +450,12 @@ function lsGet(k,fb){ try{ var v=localStorage.getItem(k); return v?JSON.parse(v)
 function lsSet(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }
 var P = SCREEN; // storage namespace so Kitchen, Bar and Coffee never share marks
 var DONE   = lsGet('kds_done_'+P, {});     // itemKey -> done timestamp
-var CLOSED = lsGet('kds_closed_'+P, {});   // table -> timestamp the ticket was cleared
+var CLOSED = lsGet('kds_closedids_'+P, {});   // order id -> time it was cleared on THIS screen (ids, not tables, so clock differences and table reuse can't hide new orders)
 var HIST   = lsGet('kds_hist_'+P, []);     // finished tickets, newest first
 var RECALL = lsGet('kds_recall_'+P, []);   // tickets brought back from Completed
 var PRINTED= lsGet('kds_printed_'+P, {});
 var AUTOPRINT = !!lsGet('kds_autoprint_'+P, false);
-function saveAll(){ lsSet('kds_done_'+P,DONE); lsSet('kds_closed_'+P,CLOSED); lsSet('kds_hist_'+P,HIST); lsSet('kds_recall_'+P,RECALL); lsSet('kds_printed_'+P,PRINTED); }
+function saveAll(){ lsSet('kds_done_'+P,DONE); lsSet('kds_closedids_'+P,CLOSED); lsSet('kds_hist_'+P,HIST); lsSet('kds_recall_'+P,RECALL); lsSet('kds_printed_'+P,PRINTED); }
 
 // ─── Turning raw tickets into clean lines ───────────────────────
 var TEMP_RE = /\s*[·\-]\s*(Rare|Medium Rare|Medium Well|Medium|Well Done|Well)\s*$/i;
@@ -571,13 +573,11 @@ function normalize(orders){
 
 // ─── Build tickets (one per table) ──────────────────────────────
 function buildTickets(){
-  var n=normalize(STATE.orders);
+  var n=normalize(STATE.orders.filter(function(o){ return !CLOSED[o.id]; }));
   var pool = SCREEN==='kitchen' ? n.items : n.drinks.filter(function(d){ return normSt(d.station)===SCREEN; });
   RECALL.forEach(function(t){ t.items.forEach(function(it){ it.doneAt=DONE[it.key]||null; }); pool=pool.concat(t.items); });
   var tables={};
   pool.forEach(function(it){
-    var closed=CLOSED[it.table];
-    if (closed && (it.firedAt||it.receivedAt||0)<=closed && !it.recalled) return;
     var t=tables[it.table]||(tables[it.table]={ table:it.table, server:it.server, covers:it.covers, items:[], notes:[] });
     if (!t.server) t.server=it.server; if (!t.covers) t.covers=it.covers;
     t.items.push(it);
@@ -585,7 +585,6 @@ function buildTickets(){
   n.notes.forEach(function(nt){
     if (SCREEN==='kitchen' ? isDrinkSt(nt.station) : normSt(nt.station)!==SCREEN) return;
     var t=tables[nt.table]; if (!t) return;
-    var closed=CLOSED[nt.table]; if (closed && nt.at<=closed) return;
     t.notes.push(nt);
   });
   var list=Object.keys(tables).map(function(k){ return decorate(tables[k]); });
@@ -701,8 +700,7 @@ var allTickets=[];
 function render(){
   var tickets=buildTickets();
   // very old tickets go to Completed on their own (nothing is lost; recall from there)
-  var now=Date.now(), stale=tickets.filter(function(t){ return now-t.activeAt>STALE_HOURS*3600000; });
-  if (stale.length) { stale.forEach(function(t){ archive(t,'auto'); }); tickets=buildTickets(); }
+  if (archiveStale()) tickets=buildTickets();
   allTickets=tickets;
   var vis=tickets.map(visibleTicket).filter(Boolean);
   var top=renderTop(vis);
@@ -750,18 +748,42 @@ function toggleCollapse(id){
   STATE.collapsed[id]=!cur; render();
 }
 function collapseAll(flag){ allTickets.forEach(function(t){ STATE.collapsed[t.table]=flag; }); render(); }
-function archive(t, how){
-  var snap={ table:t.table, server:t.server, covers:t.covers, closedAt:Date.now(), how:how||'bump',
-    items:t.items.map(function(i){ return { key:i.key, seat:i.seat, name:i.name, mods:i.mods, size:i.size, label:i.label, station:i.station, status:i.status, receivedAt:i.receivedAt, firedAt:i.firedAt, doneAt:i.doneAt||DONE[i.key]||null, table:i.table, server:i.server, covers:i.covers, rank:i.rank, recalled:true } }) };
+function orderForScreen(o){
+  if (!o) return false;
+  if (SCREEN==='kitchen') {
+    if (o.tastingCourse) return !isDrinkSt(o.tastingCourse.station);
+    if (o.isKitchenNote || o.allergyOverride || o.overview) return true;
+    return (o.items||[]).some(function(i){ return !isDrinkSt(i.station); });
+  }
+  return (o.items||[]).some(function(i){ return normSt(i.station)===SCREEN; });
+}
+function snapshotOf(t, how){
+  return { table:t.table, server:t.server, covers:t.covers, closedAt:Date.now(), how:how||'bump',
+    items:t.items.map(function(i){ return { key:i.key, seat:i.seat, name:i.name, mods:i.mods, size:i.size, label:i.label, station:i.station, status:i.status, receivedAt:i.receivedAt, firedAt:i.firedAt, doneAt:i.doneAt||DONE[i.key]||null, table:i.table, server:i.server, covers:i.covers, rank:i.rank, recalled:true }; }) };
+}
+function pushHistory(snap){
   HIST.unshift(snap);
   var cutoff=Date.now()-HISTORY_DAYS*86400000;
   HIST=HIST.filter(function(h){ return h.closedAt>cutoff; }).slice(0,400);
-  CLOSED[t.table]=Date.now();
+}
+// Clear one ticket (all of this screen's orders for that table). Only this screen's orders leave the shared feed.
+function archive(t, how){
+  pushHistory(snapshotOf(t,how));
+  var ids=STATE.orders.filter(function(o){ return String(o.table)===String(t.table) && !CLOSED[o.id] && orderForScreen(o); }).map(function(o){ return o.id; });
+  ids.forEach(function(id){ CLOSED[id]=Date.now(); });
   RECALL=RECALL.filter(function(r){ return r.table!==t.table; });
-  // take the tickets off the shared feed so other screens stop showing them
-  var ids={}; STATE.orders.forEach(function(o){ if (String(o.table)===String(t.table)) ids[o.id]=1; });
-  if (SCREEN==='kitchen') Object.keys(ids).forEach(function(id){ removeActiveOrder(id); });
+  if (SCREEN==='kitchen' && how!=='auto') ids.forEach(function(id){ removeActiveOrder(id); });
   saveAll();
+}
+// Very old orders (not touched for STALE_HOURS) go to Completed on their own, one order at a time; fresh orders are never touched.
+function archiveStale(){
+  var now=Date.now(), stale=STATE.orders.filter(function(o){ return o && !CLOSED[o.id] && orderForScreen(o) && now-(Number(o.sentAt)||0)>STALE_HOURS*3600000; });
+  if (!stale.length) return false;
+  var n=normalize(stale), pool=SCREEN==='kitchen'?n.items:n.drinks.filter(function(d){ return normSt(d.station)===SCREEN; }), tables={};
+  pool.forEach(function(it){ var t=tables[it.table]||(tables[it.table]={table:it.table,server:it.server,covers:it.covers,items:[]}); t.items.push(it); });
+  Object.keys(tables).forEach(function(k){ pushHistory(snapshotOf(tables[k],'auto')); });
+  stale.forEach(function(o){ CLOSED[o.id]=now; });
+  saveAll(); return true;
 }
 function bump(id){
   var t=allTickets.filter(function(x){ return x.table===id; })[0];
@@ -769,14 +791,13 @@ function bump(id){
   if (t.status!=='ready' && STATE.armed!==id) { STATE.armed=id; render(); setTimeout(function(){ if (STATE.armed===id) { STATE.armed=null; render(); } },4000); return; }
   STATE.armed=null;
   archive(t,'bump');
-  if (SCREEN==='kitchen') { STATE.orders=STATE.orders.filter(function(o){ return String(o.table)!==String(id); }); }
+  STATE.orders=STATE.orders.filter(function(o){ return !(CLOSED[o.id] && SCREEN==='kitchen'); });
   render();
 }
 function recall(i){
   var h=HIST[i]; if (!h) return;
   HIST.splice(i,1);
   h.items.forEach(function(it){ delete DONE[it.key]; it.doneAt=null; it.recalled=true; });
-  delete CLOSED[h.table];
   RECALL.push({ table:h.table, items:h.items });
   STATE.view='live'; saveAll(); render();
 }
@@ -867,6 +888,7 @@ function startKDS() {
   document.title=SCREEN_TITLE+' Display';
   $('kds-title').textContent=SCREEN_TITLE;
   document.body.classList.add('screen-'+SCREEN);
+  render();
   loadOrders();
   setInterval(updateClock,1000); updateClock();
   setInterval(function(){ if (document.activeElement!==$('k-search')) render(); },30000);
