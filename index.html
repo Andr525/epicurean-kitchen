@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#f3f4f6">
-<title>Epicurean Kitchen Display</title><!-- build Nov6-d -->
+<title>Epicurean Kitchen Display</title><!-- build Nov7-a -->
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-auth-compat.js"></script>
@@ -254,6 +254,8 @@ body{background:#f3f4f6;color:#111827;font-family:'Inter',-apple-system,sans-ser
   html,body{overflow:visible;height:auto}
   #print-area,#print-area *{visibility:visible}
   #print-area{display:block;position:absolute;left:0;top:0;width:80mm;font:700 13px/1.35 'Courier New',monospace;white-space:pre-wrap;color:#000}
+  #print-area .pg{page-break-after:always;break-after:page;padding-bottom:6mm}
+  #print-area .pg:last-child{page-break-after:auto}
 }
 @media(max-width:600px){.k-ticket{flex-basis:84vw;width:84vw}.k-search{width:96px;padding:4px 8px;font-size:.75rem}.k-statusbar{padding:6px 8px;gap:4px;flex-wrap:nowrap;overflow-x:auto}.k-group{gap:4px}.k-chip{padding:4px 9px;font-size:.7rem;white-space:nowrap}.k-chip b{font-size:.85rem}.k-stations{padding:5px 8px}.k-tab{padding:4px 10px;font-size:.72rem}.k-tools{padding:5px 8px;gap:5px;flex-wrap:nowrap;overflow-x:auto}.k-tool{padding:4px 8px;font-size:.68rem;white-space:nowrap}}
 
@@ -894,13 +896,53 @@ function ticketText(t, onlySection){
   });
   return L.join('\n');
 }
-function printText(text){
-  var el=$('print-area'); el.textContent=text;
+// Runner slips: BOH (boh_shared/print_settings) says how many copies and whether ladies print first.
+var PRINTSET=lsGet('kds_printset',{copies:1, ladiesFirst:true});
+function isLadySeat(seat){ return /A$/i.test(String(seat||'')); }
+function slipLine(it){
+  var pm=parseMods(it.mods);
+  var l=' '+String(it.seat==='table'?'T':it.seat).padEnd(3)+' '+it.name+(it.size?' ('+it.size+')':'');
+  pm.allergies.forEach(function(a){ l+='\n       ! '+(/PASTA|GLUTEN-FREE/.test(a)?'':'ALLERGY: ')+a; });
+  pm.texts.forEach(function(x){ l+='\n       '+x; });
+  return l;
+}
+// One runner slip for a fired course: ladies' dishes on one piece, a cut line, then the gentlemen's below.
+function runnerSlip(t, label){
+  var sec=t.sections.filter(function(x){ return x.label===label; })[0]; if (!sec) return '';
+  var fired=sec.items.filter(function(i){ return i.status==='fired'; });
+  if (!fired.length) return '';
+  var head='TABLE '+t.table+'  '+label.toUpperCase()+'\n'+(t.server?t.server+' · ':'')+(t.covers?t.covers+' covers · ':'')+'fired '+clock12(sec.firedAt||Date.now());
+  var notes=t.notes.map(function(n){ return (n.allergy?'!! ':'** ')+(n.seat?n.seat+': ':'')+n.text; });
+  var blocks=[];
+  if (PRINTSET.ladiesFirst!==false && t.covers>=4) {
+    var ladies=fired.filter(function(i){ return isLadySeat(i.seat); });
+    var rest=fired.filter(function(i){ return !isLadySeat(i.seat); });
+    if (ladies.length) blocks.push({title:'LADIES', items:ladies});
+    if (rest.length) blocks.push({title:ladies.length?'GENTLEMEN':'', items:rest});
+  } else blocks.push({title:'', items:fired});
+  var CUT='\n- - - - - - - - - - - - -  CUT  - - - - - - - - - - - - -\n';
+  return blocks.map(function(b,i){
+    var h=head+(b.title?'  ·  '+b.title:'');
+    return h+'\n'+(i===0&&notes.length?notes.join('\n')+'\n':'')+'\n'+b.items.map(slipLine).join('\n');
+  }).join('\n'+CUT+'\n');
+}
+function slipCopies(text){
+  var n=Math.max(1,Math.min(6,Number(PRINTSET.copies)||1)), out=[];
+  for (var i=0;i<n;i++) out.push((n>1?'COPY '+(i+1)+' OF '+n+'\n':'')+text);
+  return out;
+}
+function printPages(pages){
+  var el=$('print-area'); el.textContent='';
+  pages.forEach(function(txt){ var d=document.createElement('div'); d.className='pg'; d.textContent=txt; el.appendChild(d); });
   window.print();
 }
+function printText(text){ printPages([text]); }
 function printTicket(id){
   var t=allTickets.filter(function(x){ return x.table===id; })[0]; if (!t) return;
-  printText(ticketText(t));
+  var pages=[];
+  t.sections.forEach(function(sec){ var sl=runnerSlip(t,sec.label); if (sl) slipCopies(sl).forEach(function(x){ pages.push(x); }); });
+  if (!pages.length) { alert('Nothing has been fired for this table yet \u2014 the slip prints when the order is fired.'); return; }
+  printPages(pages);
 }
 function toggleAutoPrint(){ AUTOPRINT=!AUTOPRINT; lsSet('kds_autoprint_'+P,AUTOPRINT); render(); }
 function maybeAutoPrint(tickets){
@@ -909,10 +951,10 @@ function maybeAutoPrint(tickets){
   tickets.forEach(function(t){
     var fresh={};
     t.items.forEach(function(i){ if (i.status==='fired' && !PRINTED[i.key]) { PRINTED[i.key]=1; fresh[i.label]=1; } });
-    Object.keys(fresh).forEach(function(l){ out.push(ticketText(t,l)); });
+    Object.keys(fresh).forEach(function(l){ var sl=runnerSlip(t,l); if (sl) slipCopies(sl).forEach(function(x){ out.push(x); }); });
   });
   lsSet('kds_printed_'+P,PRINTED);
-  if (out.length) printText(out.join('\n\n--------------------------------\n\n'));
+  if (out.length) printPages(out);
 }
 
 // ─── Login ──────────────────────────────────────────────────────
@@ -952,6 +994,9 @@ function startKDS() {
   $('kds-title').textContent=SCREEN_TITLE;
   document.body.classList.add('screen-'+SCREEN);
   render();
+  if (fbReady) fbDb.collection('boh_shared').doc('print_settings').onSnapshot(function(doc){
+    var d=doc.exists&&doc.data()||null; if (d){ PRINTSET={copies:Number(d.copies)||1, ladiesFirst:d.ladiesFirst!==false}; lsSet('kds_printset',PRINTSET); }
+  }, function(){});
   loadOrders();
   setInterval(updateClock,1000); updateClock();
   setInterval(function(){ if (document.activeElement!==$('k-search')) render(); },30000);
