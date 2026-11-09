@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#f3f4f6">
-<title>Epicurean Kitchen Display</title><!-- build Nov7-a -->
+<title>Epicurean Kitchen Display</title><!-- build Nov9-b -->
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-auth-compat.js"></script>
@@ -192,6 +192,27 @@ body{background:#f3f4f6;color:#111827;font-family:'Inter',-apple-system,sans-ser
 .k-search{border:1px solid #d1d5db;border-radius:8px;padding:7px 10px;font-size:.85rem;width:150px;font-family:inherit}
 .k-tool{border:1px solid #d1d5db;background:#fff;border-radius:8px;padding:7px 11px;font-size:.78rem;color:#374151;cursor:pointer;font-family:inherit}
 .k-tool.on{background:#dcfce7;border-color:#16a34a;color:#166534}
+.k-main{display:flex;align-items:flex-start;gap:0}
+.k-main>.k-grid{flex:1 1 auto;min-width:0}
+.k-counts{flex:0 0 250px;width:250px;margin:4px 10px 14px 0;background:#fff;border:1px solid #e5e7eb;border-radius:8px;overflow-y:auto;max-height:calc(100vh - 150px);max-height:calc(100dvh - 150px);position:sticky;top:4px}
+.k-ch{padding:6px 10px;font-size:.7rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;background:#111827;color:#fff;position:sticky;top:0}
+.k-cst{display:flex;justify-content:space-between;gap:6px;padding:4px 10px;background:#f3f4f6;font-size:.66rem;font-weight:800;text-transform:uppercase;color:#374151}
+.k-cst span:last-child{font-weight:600;color:#6b7280;text-transform:none}
+.k-crow{display:flex;gap:7px;align-items:flex-start;padding:4px 10px;border-top:1px solid #f3f4f6;cursor:pointer}
+.k-crow b{flex:none;min-width:28px;font-size:.95rem}
+.k-cname{flex:1;font-size:.8rem;font-weight:600;line-height:1.2}
+.k-cname i{font-style:normal;color:#6b7280;font-size:.65rem}
+.k-cname em{display:block;font-style:normal;font-size:.62rem;color:#b91c1c;font-weight:700}
+.k-cmin{flex:none;font-size:.65rem;font-weight:700;color:#6b7280}
+.k-cempty{padding:14px 10px;font-size:.75rem;color:#9ca3af}
+.k-ex{border-top:1px solid #eef0f3;padding:5px 10px}
+.k-ex.go{background:#ecfdf5}
+.k-exh{display:flex;gap:6px;font-size:.78rem}
+.k-exh span{margin-left:auto;font-weight:800;color:#b45309}
+.k-ex.go .k-exh span{color:#15803d}
+.k-exs{display:flex;justify-content:space-between;font-size:.68rem;color:#4b5563;padding-left:6px}
+.k-exs.ok{color:#15803d}
+@media(max-width:899px){.k-main{flex-direction:column}.k-counts{width:auto;flex-basis:auto;margin:0 10px 12px;max-height:40vh;position:static}}
 .k-grid{display:flex;gap:8px;padding:4px 10px 14px;align-items:flex-start;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
 .k-ticket{flex:0 0 232px;width:232px;scroll-snap-align:start;background:#fff;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.05);display:flex;flex-direction:column;max-height:calc(100vh - 150px);max-height:calc(100dvh - 150px)}
 .k-tbody{overflow-y:auto;-webkit-overflow-scrolling:touch;flex:1 1 auto;min-height:0}
@@ -213,6 +234,7 @@ body{background:#f3f4f6;color:#111827;font-family:'Inter',-apple-system,sans-ser
 .k-sechead{display:flex;align-items:center;gap:5px;padding:1px 8px}
 .k-seclabel{font-size:.66rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#111827}
 .k-secn{font-size:.68rem;color:#6b7280}
+.k-times{margin-left:auto;font-size:.58rem;color:#6b7280;font-weight:600;white-space:nowrap}.k-times.hold{color:#a16207;font-weight:800;text-transform:uppercase}
 .k-sectag{margin-left:auto;font-size:.54rem;font-weight:800;padding:2px 6px;border-radius:4px;background:#dbeafe;color:#1d4ed8}
 .k-sec.hold .k-sectag{background:#fef08a;color:#854d0e}.k-sec.working .k-sectag{background:#fef3c7;color:#b45309}.k-sec.done .k-sectag{background:#bbf7d0;color:#166534}
 .k-sectimes{padding:0 12px 3px;font-size:.68rem;color:#6b7280}
@@ -440,7 +462,7 @@ var SCREEN = (function(){ try { var s=(new URLSearchParams(location.search).get(
 var SCREEN_TITLE = { kitchen:'Kitchen', bar:'Bar', coffee:'Coffee' }[SCREEN];
 var KITCHEN_CODES = ['1001','5001','EPICUREAN2024']; // kitchen + manager + owner
 var KITCHEN_STATIONS = ['Grill','Sauté','Fry','Cold / Garde Manger','Pastry','Expo'];
-var STATE = { orders:[], station:'All', filter:'all', view:'live', search:'', collapsed:{}, expanded:{}, armed:null };
+var STATE = { showCounts:(window.innerWidth>=900), orders:[], station:'All', filter:'all', view:'live', search:'', collapsed:{}, expanded:{}, armed:null };
 var STALE_HOURS = 14;          // tickets with no activity this long go to Completed automatically
 var HISTORY_DAYS = 7;
 
@@ -659,7 +681,7 @@ function renderTop(list){
   }
   h+='<div class="k-tools"><input class="k-search" id="k-search" placeholder="Find table…" value="'+esc(STATE.search)+'" oninput="setSearch(this.value)">'+
     '<button class="k-tool" onclick="collapseAll(true)">Collapse all</button><button class="k-tool" onclick="collapseAll(false)">Expand all</button>'+
-    '<button class="k-tool'+(AUTOPRINT?' on':'')+'" onclick="toggleAutoPrint()">Auto-print: '+(AUTOPRINT?'ON':'off')+'</button></div>';
+    '<button class="k-tool'+(AUTOPRINT?' on':'')+'" onclick="toggleAutoPrint()">Auto-print: '+(AUTOPRINT?'ON':'off')+'</button>'+(SCREEN==='kitchen'?'<button class="k-tool'+(STATE.showCounts?' on':'')+'" onclick="toggleCounts()">'+(STATE.station==='Expo'?'Expo board':'Line counts')+'</button>':'')+'</div>';
   return h;
 }
 // Allergy words out of the long strings the POS sends ("Position 1 — ALLERGY GLUTEN — no bread", "⚠ NO GLUTEN", "WITHOUT GLUTEN — CHEF TO CONFIRM")
@@ -706,26 +728,98 @@ function groupRow(g, extraLeft, arrow){
     (arrow||'')+(hold?'<span class="k-holdtag">HOLD</span>':'<span class="k-check">'+(g.done?'✓':'')+'</span>')+'</div>';
 }
 function sectionHtml(t, s){
-  var tag={hold:'HOLD',fired:'FIRED',working:'IN PROGRESS',done:'OUT'}[s.state];
-  var tm=SCREEN==='kitchen' ? ' <span class="k-times">'+(s.firedAt?clock12(s.firedAt):'not fired')+'</span>' : '';
-  var head='<div class="k-sechead"><span class="k-seclabel">'+esc(s.label)+'</span><span class="k-secn">'+s.items.length+tm+'</span><span class="k-sectag">'+tag+'</span></div>';
+  var doneAll=s.items.length && s.items.every(function(i){ return i.doneAt; });
+  var outAt=doneAll ? Math.max.apply(null, s.items.map(function(i){ return i.doneAt; })) : 0;
+  var tm='';
+  if (s.state==='hold') tm='<span class="k-times hold">hold</span>';
+  else if (doneAll && s.firedAt) tm='<span class="k-times">'+clock12(s.firedAt)+' → '+clock12(outAt)+' · '+Math.max(0,Math.round((outAt-s.firedAt)/60000))+'m</span>';
+  else if (s.firedAt) tm='<span class="k-times">fired '+clock12(s.firedAt)+' · '+ago(s.firedAt)+'</span>';
+  var head='<div class="k-sechead"><span class="k-seclabel">'+esc(s.label)+'</span>'+tm+'</div>';
   var body='';
   if (isGiveaway(s.label) && s.items.length>1) {
-    // complimentary course: one line, arrow to see each dish
+    // complimentary course: one line; only seats with an allergy are named
     var open=!!STATE.expanded[t.table+'|'+s.label];
     var dishes=groupItems(s.items);
-    var seatsN={}; s.items.forEach(function(i){ seatsN[i.seat]=1; });
     var allKeys=s.items.map(function(i){ return i.key; });
     var done=s.items.every(function(i){ return i.doneAt; });
     var hold=s.items.every(function(i){ return i.status==='hold'; });
-    var anyBad=s.items.some(function(i){ return parseMods(i.mods).allergies.length; });
+    var bySeat={}, order=[];
+    s.items.forEach(function(i){ parseMods(i.mods).allergies.forEach(function(a){ var k=i.seat+'|'+a; if(!bySeat[k]){ bySeat[k]=1; order.push({seat:i.seat==='table'?'T':i.seat, a:a}); } }); });
+    var warns=order.map(function(o){ return '<span class="k-warn" style="display:block">▲ '+esc(o.seat)+' '+esc(o.a)+'</span>'; }).join('');
     var arrow='<button type="button" class="k-arrow" onclick="event.stopPropagation();toggleExpand(\''+esc(t.table+'|'+s.label).replace(/'/g,"\\'")+'\')">'+(open?'▴':'▾')+'</button>';
-    body='<div class="k-item'+(done?' done':'')+(hold?' hold':'')+'"'+(hold?'':' data-keys="'+esc(JSON.stringify(allKeys))+'" onclick="toggleGroup(this)"')+'><span class="k-seat qty">'+Object.keys(seatsN).length+'×</span><span class="k-iname">'+dishes.length+' dishes<span class="k-size">for '+Object.keys(seatsN).length+' guests</span>'+(anyBad?'<span class="k-warn">▲ allergy inside</span>':'')+'</span>'+arrow+(hold?'<span class="k-holdtag">HOLD</span>':'<span class="k-check">'+(done?'✓':'')+'</span>')+'</div>';
+    body='<div class="k-item'+(done?' done':'')+(hold?' hold':'')+'"'+(hold?'':' data-keys="'+esc(JSON.stringify(allKeys))+'" onclick="toggleGroup(this)"')+'><span class="k-iname">'+(warns||'<span class="k-size" style="margin:0">all seats</span>')+'</span>'+arrow+(hold?'<span class="k-holdtag">HOLD</span>':'<span class="k-check">'+(done?'✓':'')+'</span>')+'</div>';
     if (open) body+=dishes.map(function(g){ var w=g.pm.allergies.map(function(a){ return ' <span class="k-warn" style="display:inline">▲ '+esc(a)+'</span>'; }).join(''); return '<div class="k-sub"><b>'+g.items.length+'×</b> '+esc(g.name)+w+'</div>'; }).join('');
   } else {
     body=groupItems(s.items).map(function(g){ return groupRow(g); }).join('');
   }
   return '<div class="k-sec '+s.state+'">'+head+body+'</div>';
+}
+function tableTitle(id){
+  var m=String(id).match(/\d+[A-Za-z]?/);
+  return /^\d+$/.test(String(id)) ? 'Table '+id : (m ? 'Table '+m[0] : String(id));
+}
+// ─── Line counts (batch cooking) and expo board ─────────────────
+function toggleCounts(){ STATE.showCounts=!STATE.showCounts; render(); }
+function openFiredItems(){
+  var out=[];
+  allTickets.forEach(function(t){ t.items.forEach(function(i){ if (i.status==='fired' && !i.doneAt) out.push({t:t, i:i}); }); });
+  return out;
+}
+function minTxt(m){ return m>0 ? m+'m' : ''; }
+function countsHtml(){
+  var rows=openFiredItems(), byStation={}, order=[];
+  rows.forEach(function(r){
+    var st=r.i.station||'Expo'; if (normSt(st)==='expo') st='Expo';
+    var g=byStation[st]; if (!g){ g=byStation[st]={name:st, dishes:{}, order:[], n:0, oldest:Infinity}; order.push(g); }
+    var k=r.i.name.toLowerCase()+'|'+(r.i.size||'');
+    var d=g.dishes[k]; if (!d){ d=g.dishes[k]={name:r.i.name, size:r.i.size, items:[], vars:{}, oldest:Infinity}; g.order.push(d); }
+    d.items.push(r.i); g.n++;
+    d.oldest=Math.min(d.oldest, r.i.firedAt||Infinity); g.oldest=Math.min(g.oldest, r.i.firedAt||Infinity);
+    var pm=parseMods(r.i.mods), tags=pm.allergies.map(function(a){ return '▲ '+a; }).concat(pm.texts);
+    tags.forEach(function(x){ d.vars[x]=(d.vars[x]||0)+1; });
+  });
+  var onlySt = STATE.station!=='All' ? normSt(STATE.station) : '';
+  var list=order.filter(function(g){ return onlySt ? normSt(g.name)===onlySt : normSt(g.name)!=='expo'; });
+  list.sort(function(a,b){ return KITCHEN_STATIONS.indexOf(a.name)-KITCHEN_STATIONS.indexOf(b.name); });
+  var h='<aside class="k-counts"><div class="k-ch">Line counts</div>';
+  if (!list.length) h+='<div class="k-cempty">Nothing fired</div>';
+  list.forEach(function(g){
+    var longest=0; g.order.forEach(function(d){ longest=Math.max(longest, prepMin(d.name)); });
+    h+='<div class="k-cst"><span>'+esc(g.name)+'</span><span>'+g.n+(g.n===1?' plate':' plates')+(longest?' · '+longest+'m':'')+(g.oldest!==Infinity?' · wait '+ago(g.oldest):'')+'</span></div>';
+    g.order.sort(function(a,b){ return a.oldest-b.oldest; }).forEach(function(d){
+      var pm=prepMin(d.name), keys=d.items.map(function(i){ return i.key; });
+      var vars=Object.keys(d.vars).map(function(x){ return d.vars[x]+' '+x; }).join(' · ');
+      h+='<div class="k-crow" data-keys="'+esc(JSON.stringify(keys))+'" onclick="toggleGroup(this)"><b>'+d.items.length+'×</b><span class="k-cname">'+esc(d.name)+(d.size?' <i>'+esc(d.size)+'</i>':'')+(vars?'<em>'+esc(vars)+'</em>':'')+'</span><span class="k-cmin">'+minTxt(pm)+'</span></div>';
+    });
+  });
+  return h+'</aside>';
+}
+// Expo: for each fired course, which stations are still cooking, what is ready to run, and when each station should start so everything lands together.
+function expoHtml(){
+  var h='<aside class="k-counts"><div class="k-ch">Expo</div>', any=false;
+  allTickets.slice().sort(function(a,b){ return a.receivedAt-b.receivedAt; }).forEach(function(t){
+    t.sections.forEach(function(sec){
+      var fired=sec.items.filter(function(i){ return i.status==='fired'; }); if (!fired.length) return;
+      var sts={}, order=[];
+      fired.forEach(function(i){ var n=i.station||'Expo'; var g=sts[n]; if(!g){ g=sts[n]={name:n, total:0, done:0, left:0}; order.push(g); } g.total++; if (i.doneAt) g.done++; else g.left=Math.max(g.left, prepMin(i.name)); });
+      var allDone=order.every(function(g){ return g.done===g.total; });
+      if (allDone && sec.outAt) return;               // already out
+      any=true;
+      var longest=order.reduce(function(m,g){ return Math.max(m,g.left); },0);
+      var elapsed=Math.floor((Date.now()-(sec.firedAt||Date.now()))/60000);
+      h+='<div class="k-ex'+(allDone?' go':'')+'"><div class="k-exh"><b>'+esc(tableTitle(t.table))+'</b> '+esc(sec.label)+'<span>'+(allDone?'RUN IT':(longest?'ready ~'+Math.max(0,longest-elapsed)+'m':ago(sec.firedAt||Date.now())))+'</span></div>'+
+        order.map(function(g){
+          var hint=(!allDone && order.length>1 && longest && g.left && g.done<g.total) ? (longest-g.left-elapsed>0 ? ' · start in '+(longest-g.left-elapsed)+'m' : ' · start now') : '';
+          return '<div class="k-exs'+(g.done===g.total?' ok':'')+'"><span>'+esc(g.name)+'</span><span>'+g.done+'/'+g.total+hint+'</span></div>';
+        }).join('')+'</div>';
+    });
+  });
+  if (!any) h+='<div class="k-cempty">Nothing waiting on the pass</div>';
+  return h+'</aside>';
+}
+function sidePanel(){
+  if (SCREEN!=='kitchen' || !STATE.showCounts) return '';
+  return STATE.station==='Expo' ? expoHtml() : countsHtml();
 }
 function ticketHtml(t){
   var id=t.table;
@@ -734,11 +828,10 @@ function ticketHtml(t){
   var ageCls=t.status==='ready'||t.status==='hold'?'':(age>=15?' late':(age>=10?' warn':''));
   var notes=t.notes.map(function(n){ return '<div class="k-note'+(n.allergy?' allergy':'')+'">'+(n.seat?'<b>'+esc(n.seat)+'</b> ':'')+esc(n.text)+'</div>'; }).join('');
   var head='<div class="k-bar '+t.status+'"></div>'+
-    '<div class="k-head" onclick="toggleCollapse(\''+id+'\')"><span class="k-table">T'+esc(id)+'</span>'+
-    '<span class="k-meta">'+esc(t.server||'')+(t.covers?' · '+t.covers+' covers':'')+'</span>'+
-    '<span class="k-state '+t.status+'">'+{new:'NEW',preparing:'PREPARING',ready:'READY',hold:'ON HOLD'}[t.status]+'</span>'+
+    '<div class="k-head" onclick="toggleCollapse(\''+id+'\')"><span class="k-table">'+esc(tableTitle(id))+'</span>'+
+    '<span class="k-meta">'+esc(t.server||'')+'</span>'+
     '<span class="k-chev">'+(collapsed?'▾':'▴')+'</span></div>';
-  var timeRow='<div class="k-trow'+ageCls+'"><span>Received '+clock12(t.receivedAt)+'</span><span>'+(t.status==='ready'?'All out':(t.firedN?('Waiting '+ago(t.oldestOpen===Infinity?t.activeAt:t.oldestOpen)):'Not fired'))+'</span><span>'+t.doneN+'/'+t.firedN+' out</span></div>';
+  var timeRow='<div class="k-trow'+ageCls+'"><span>in '+clock12(t.receivedAt)+'</span><span>'+(t.status==='ready'?'all out':(t.firedN?ago(t.oldestOpen===Infinity?t.activeAt:t.oldestOpen):'not fired'))+'</span></div>';
   var body='';
   if (collapsed) {
     body='<div class="k-summary">'+t.sections.map(function(s){ return '<span class="k-pill '+s.state+'">'+esc(s.label)+' '+{hold:'hold',fired:'●',working:'◐',done:'✓'}[s.state]+'</span>'; }).join('')+'</div>';
@@ -763,7 +856,7 @@ function render(){
   var list=vis.filter(function(t){ return STATE.filter==='all' || t.status===STATE.filter; });
   if (STATE.search) list=list.filter(function(t){ return ('t'+t.table).toLowerCase().indexOf(STATE.search.toLowerCase())>=0 || String(t.table).indexOf(STATE.search)>=0; });
   list.sort(function(a,b){ return (a.status==='ready')-(b.status==='ready') || a.receivedAt-b.receivedAt; });
-  h+= list.length ? '<div class="k-grid">'+list.map(ticketHtml).join('')+'</div>' : '<div class="k-empty"><div>✓</div><p>All clear — no open orders</p></div>';
+  h+= '<div class="k-main">'+(list.length ? '<div class="k-grid">'+list.map(ticketHtml).join('')+'</div>' : '<div class="k-empty" style="flex:1"><div>✓</div><p>All clear — no open orders</p></div>')+sidePanel()+'</div>';
   var keep=$('k-search')&&document.activeElement===$('k-search');
   var gridEl=document.querySelector('#kds-content .k-grid'), sx=gridEl?gridEl.scrollLeft:0, sy={};
   document.querySelectorAll('#kds-content .k-ticket').forEach(function(el){ var b=el.querySelector('.k-tbody'); if (b) sy[el.getAttribute('data-t')]=b.scrollTop; });
@@ -897,6 +990,9 @@ function ticketText(t, onlySection){
   return L.join('\n');
 }
 // Runner slips: BOH (boh_shared/print_settings) says how many copies and whether ladies print first.
+var PREP=lsGet('kds_prep',{});
+function prepKey(n){ return String(n||'').toLowerCase().replace(/\s*\((main|appetizer|app)\s*size\)\s*$/,'').replace(/\s+[-·]\s+(rare|medium rare|medium|medium well|well done|well)\s*$/,'').replace(/[^a-z0-9]+/g,' ').trim(); }
+function prepMin(n){ var v=Number(PREP[prepKey(n)]); return v>0?v:0; }
 var PRINTSET=lsGet('kds_printset',{copies:1, ladiesFirst:true});
 function isLadySeat(seat){ return /A$/i.test(String(seat||'')); }
 function slipLine(it){
@@ -994,6 +1090,9 @@ function startKDS() {
   $('kds-title').textContent=SCREEN_TITLE;
   document.body.classList.add('screen-'+SCREEN);
   render();
+  if (fbReady) fbDb.collection('boh_shared').doc('prep_times').onSnapshot(function(doc){
+    var d=doc.exists&&doc.data()||null; PREP=(d&&d.times)||{}; lsSet('kds_prep',PREP); render();
+  }, function(){});
   if (fbReady) fbDb.collection('boh_shared').doc('print_settings').onSnapshot(function(doc){
     var d=doc.exists&&doc.data()||null; if (d){ PRINTSET={copies:Number(d.copies)||1, ladiesFirst:d.ladiesFirst!==false}; lsSet('kds_printset',PRINTSET); }
   }, function(){});
