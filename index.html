@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#f3f4f6">
-<title>Epicurean Kitchen Display</title><!-- build Nov9-d -->
+<title>Epicurean Kitchen Display</title><!-- build Nov10-a -->
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-auth-compat.js"></script>
@@ -487,6 +487,8 @@ function saveAll(){ lsSet('kds_done_'+P,DONE); lsSet('kds_closedids_'+P,CLOSED);
 
 // ─── Turning raw tickets into clean lines ───────────────────────
 var TEMP_RE = /\s*[·\-]\s*(Rare|Medium Rare|Medium Well|Medium|Well Done|Well)\s*$/i;
+// The POS sends seat "1" plus seatPriority:true for a lady; show that as 1A everywhere.
+function seatOf(i){ var s=String(i.seat==null||i.seat===''?'table':i.seat); if (/^\d+$/.test(s) && i.seatPriority) s+='A'; return s; }
 function seatRank(seat){ var m=String(seat||'').match(/^(\d+)(A?)$/); if(!m) return 9999; return (m[2]?0:1000)+parseInt(m[1],10); }
 function labelRank(l){
   var s=String(l||'').toLowerCase();
@@ -561,11 +563,11 @@ function normalize(orders){
     }
     (o.items||[]).forEach(function(i){
       if (isDrinkSt(i.station)) {
-        drinks.push(newItem(o,{ seat:String(i.seat||'table'), name:splitName(i.name).name.split(/\s+[·|]\s+/)[0].replace(/\s*\$\d+(\.\d+)?\s*$/,''), size:drinkSize(i.selectedMod), mods:cleanMods([i.notes]), station:i.station, status:'fired', label:'Drinks', receivedAt:o.sentAt, firedAt:o.sentAt }));
+        drinks.push(newItem(o,{ seat:seatOf(i), name:splitName(i.name).name.split(/\s+[·|]\s+/)[0].replace(/\s*\$\d+(\.\d+)?\s*$/,''), size:drinkSize(i.selectedMod), mods:cleanMods([i.notes]), station:i.station, status:'fired', label:'Drinks', receivedAt:o.sentAt, firedAt:o.sentAt }));
         return;
       }
       var sp=splitName(i.name);
-      var base={ seat:String(i.seat||'table'), name:sp.name, mods:sp.mods.concat(cleanMods([i.selectedMod,i.notes])), station:i.station||'Expo' };
+      var base={ seat:seatOf(i), name:sp.name, mods:sp.mods.concat(cleanMods([i.selectedMod,i.notes])), station:i.station||'Expo' };
       if (o.overview || i.preview) {
         base.label=i.courseLabel || labelFromCourse(i.course, i.name, i.station);
         base.status='hold'; base.receivedAt=o.sentAt; base.firedAt=null;
@@ -997,12 +999,21 @@ function prepKey(n){ return String(n||'').toLowerCase().replace(/\s*\((main|appe
 function prepMin(n){ var v=Number(PREP[prepKey(n)]); return v>0?v:0; }
 var PRINTSET=lsGet('kds_printset',{copies:1, ladiesFirst:true});
 function isLadySeat(seat){ return /A$/i.test(String(seat||'')); }
-function slipLine(it){
-  var pm=parseMods(it.mods);
-  var l=' '+String(it.seat==='table'?'T':it.seat).padEnd(3)+' '+it.name+(it.size?' ('+it.size+')':'');
-  pm.allergies.forEach(function(a){ l+='\n       ! '+(/PASTA|GLUTEN-FREE/.test(a)?'':'ALLERGY: ')+a; });
-  pm.texts.forEach(function(x){ l+='\n       '+x; });
-  return l;
+var SLIP_W=36;
+function wrapTxt(t,w){ var out=[], line=''; String(t).split(/\s+/).forEach(function(word){ while(word.length>w){ if(line){ out.push(line); line=''; } out.push(word.slice(0,w)); word=word.slice(w); } if(!line) line=word; else if((line+' '+word).length<=w) line+=' '+word; else { out.push(line); line=word; } }); if(line) out.push(line); return out.length?out:['']; }
+// Three columns: count at the far left, dish in the middle, seats at the far right.
+function slipRows(groups){
+  var seatW=0; groups.forEach(function(g){ g._s=g.seats.join(', '); seatW=Math.max(seatW, Math.min(g._s.length,14)); });
+  var nameW=Math.max(10, SLIP_W-3-seatW-1), lines=[];
+  groups.forEach(function(g){
+    var nm=wrapTxt(g.name+(g.size?' ('+g.size+')':''), nameW);
+    var st=wrapTxt(g._s, Math.max(seatW,1));
+    var extra=[]; g.pm.allergies.forEach(function(a){ extra.push('! '+(/PASTA|GLUTEN-FREE/.test(a)?'':'ALLERGY: ')+a); }); g.pm.texts.forEach(function(x){ wrapTxt(x,nameW-1).forEach(function(w){ extra.push(w); }); });
+    var rows=Math.max(nm.length, st.length);
+    for (var r=0;r<rows;r++) lines.push((r===0?String(g.items.length).padStart(2):'  ')+' '+(nm[r]||'').padEnd(nameW)+' '+(st[r]||'').padStart(seatW));
+    extra.forEach(function(x){ lines.push('   '+x); });
+  });
+  return lines;
 }
 // One runner slip for a fired course: ladies' dishes on one piece, a cut line, then the gentlemen's below.
 function runnerSlip(t, label){
@@ -1022,10 +1033,7 @@ function runnerSlip(t, label){
   var CUT='\n- - - - - - - - - - - - -  CUT  - - - - - - - - - - - - -\n';
   return blocks.map(function(b,i){
     var h=head+(b.title?'  ·  '+b.title:'');
-    var lines = SCREEN==='kitchen' ? b.items.map(slipLine) : groupItems(b.items).map(function(g){
-      var l=' '+g.items.length+'x  '+g.name+(g.size?' ('+g.size+')':'')+'   '+g.seats.join(', ');
-      g.pm.texts.forEach(function(x){ l+='\n       '+x; });
-      return l; });
+    var lines = slipRows(groupItems(b.items));
     return h+'\n'+(i===0&&notes.length?notes.join('\n')+'\n':'')+'\n'+lines.join('\n');
   }).join('\n'+CUT+'\n');
 }
