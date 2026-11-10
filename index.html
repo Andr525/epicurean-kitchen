@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#f3f4f6">
-<title>Epicurean Kitchen Display</title><!-- build Nov9-b -->
+<title>Epicurean Kitchen Display</title><!-- build Nov9-c -->
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-auth-compat.js"></script>
@@ -718,10 +718,12 @@ function groupItems(items){
 function groupRow(g, extraLeft, arrow){
   var hold=g.status==='hold';
   var n=g.items.length;
-  var lead = n>1 ? '<span class="k-seat qty">'+n+'×</span>' : '<span class="k-seat'+(/A$/.test(String(g.items[0].seat))?' lady':'')+'">'+esc(g.seats[0])+'</span>';
+  // Bar & coffee: quantity on the left, seats after the drink name. Kitchen: seat on the left.
+  var drinks = SCREEN!=='kitchen';
+  var lead = (drinks || n>1) ? '<span class="k-seat qty">'+n+'</span>' : '<span class="k-seat'+(/A$/.test(String(g.items[0].seat))?' lady':'')+'">'+esc(g.seats[0])+'</span>';
   var warn=g.pm.allergies.map(function(a){ return '<span class="k-warn">▲ '+esc(a)+'</span>'; }).join('');
   var txt=g.pm.texts.map(function(t){ return '<span class="k-txt">'+esc(t)+'</span>'; }).join('');
-  var seats=n>1 ? '<span class="k-seats">'+esc(g.seats.join('·'))+'</span>' : '';
+  var seats=(drinks||n>1) ? '<span class="k-seats" style="color:#374151;font-size:.72rem">'+esc(g.seats.join(' · '))+'</span>' : '';
   var click=hold?'':' data-keys="'+esc(JSON.stringify(g.keys))+'" onclick="toggleGroup(this)"';
   return '<div class="k-item'+(g.done?' done':'')+(hold?' hold':'')+'"'+click+'>'+lead+
     '<span class="k-iname">'+esc(g.name)+(g.size?'<span class="k-size">'+esc(g.size)+'</span>':'')+seats+warn+txt+'</span>'+
@@ -1019,7 +1021,11 @@ function runnerSlip(t, label){
   var CUT='\n- - - - - - - - - - - - -  CUT  - - - - - - - - - - - - -\n';
   return blocks.map(function(b,i){
     var h=head+(b.title?'  ·  '+b.title:'');
-    return h+'\n'+(i===0&&notes.length?notes.join('\n')+'\n':'')+'\n'+b.items.map(slipLine).join('\n');
+    var lines = SCREEN==='kitchen' ? b.items.map(slipLine) : groupItems(b.items).map(function(g){
+      var l=' '+g.items.length+'x  '+g.name+(g.size?' ('+g.size+')':'')+'   '+g.seats.join(', ');
+      g.pm.texts.forEach(function(x){ l+='\n       '+x; });
+      return l; });
+    return h+'\n'+(i===0&&notes.length?notes.join('\n')+'\n':'')+'\n'+lines.join('\n');
   }).join('\n'+CUT+'\n');
 }
 function slipCopies(text){
