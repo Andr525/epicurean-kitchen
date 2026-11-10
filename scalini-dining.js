@@ -1,7 +1,7 @@
 /* Scalini Fedeli prix fixe $89 + Regional Tasting $115.
    Shared by BOH, POS, kitchen, and the iPad menu. Printed BTG 2026-09-08. */
 (function (root) {
-  var VERSION = 20260913;
+  var VERSION = 20261004;
   var GM = 'Cold / Garde Manger';
   var SA = 'Sauté';
   var GR = 'Grill';
@@ -33,6 +33,8 @@
     };
   }
 
+  var KITCHEN_KEYS = {"sf_w_salmon": "Salmon", "sf_w_zucchini": "Zucchini", "sf_w_shrimp": "Shrimp", "sf_w_crostini": "Crostini", "sf_p_arugula": "Arugula", "sf_p_lobster": "Lobster", "sf_p_raviolo": "Raviolo", "sf_p_porcini": "Porcini", "sf_p_agnolotti": "Agnolotti", "sf_p_pappardelle": "Pappardelle", "sf_p_linguini": "Pescatore", "sf_p_fusilli": "Fusilli", "sf_e_sorbet": "Sorbet", "sf_d_napoleon": "Napoleon", "sf_d_cake": "Choc cake", "sf_d_tart": "Choc tart", "sf_d_basque": "Basque", "sf_d_pistachio_tart": "Pistachio tart", "sf_d_pineapple": "Pineapple tart", "sf_d_banana": "Banana", "sf_d_gelato": "Gelato", "sf_d_formaggio": "Formaggio"};
+
   function d(id, name, desc, course, station, extra) {
     extra = extra || {};
     return {
@@ -60,6 +62,9 @@
       askTemp: extra.askTemp || '',
       sourceUrl: extra.sourceUrl || '',
       moreUrl: extra.moreUrl || extra.storyUrl || extra.sourceUrl || '',
+      kitchenKey: extra.kitchenKey || KITCHEN_KEYS[id] || '',
+      voiceKeyword: extra.voiceKeyword || '',
+      voiceAliases: extra.voiceAliases || [],
       i18n: extra.i18n || {}
     };
   }
@@ -67,18 +72,18 @@
   var GELATO_STYLE_NOTE = '';
 
   var GELATO_SCOOPS = [
-    { id: 'scoop_apple', name: 'Green apple', kind: 'sorbetto', allergens: [],
+    { id: 'scoop_apple', name: 'Green apple', kind: 'sorbetto', allergens: [], voiceKeyword: 'APPLE',
       desc: 'Green apple sorbet. Made from green apples grown upstate in New York at Masker Orchards, with water. No dairy.',
       sourceUrl: 'https://maskers.com' },
-    { id: 'scoop_lemon', name: 'Lemon', kind: 'gelato', allergens: ['Dairy'],
+    { id: 'scoop_lemon', name: 'Lemon', kind: 'gelato', allergens: ['Dairy'], voiceKeyword: 'LEMON',
       desc: 'Lemon gelato. Made from lemon and milk.' },
-    { id: 'scoop_vanilla', name: 'Vanilla', kind: 'gelato', allergens: ['Dairy'],
+    { id: 'scoop_vanilla', name: 'Vanilla', kind: 'gelato', allergens: ['Dairy'], voiceKeyword: 'VANILLA',
       desc: 'Vanilla gelato. Made from vanilla and milk.' },
-    { id: 'scoop_caramel', name: 'Caramel', kind: 'gelato', allergens: ['Dairy'],
+    { id: 'scoop_caramel', name: 'Caramel', kind: 'gelato', allergens: ['Dairy'], voiceKeyword: 'CARAMEL',
       desc: 'Caramel gelato. Made from caramelized sugar and milk.' },
-    { id: 'scoop_hazelnut', name: 'Hazelnut', kind: 'gelato', allergens: ['Tree Nut', 'Dairy'],
+    { id: 'scoop_hazelnut', name: 'Hazelnut', kind: 'gelato', allergens: ['Tree Nut', 'Dairy'], voiceKeyword: 'HAZELNUT',
       desc: 'Hazelnut gelato. Made from Piedmont hazelnuts and milk. Contains tree nuts and dairy.' },
-    { id: 'scoop_pistachio', name: 'Pistachio', kind: 'gelato', allergens: ['Tree Nut', 'Dairy'],
+    { id: 'scoop_pistachio', name: 'Pistachio', kind: 'gelato', allergens: ['Tree Nut', 'Dairy'], voiceKeyword: 'PISTACHIO',
       desc: 'Pistachio gelato. Made from Sicilian pistachios and milk. Contains tree nuts and dairy.' }
   ];
 
@@ -224,8 +229,8 @@
       i18n: ix('Tiras de pechuga de pollo “Scarpariello”', 'Salteado con salchicha y gratinado de patata', 'Lanières de poulet « Scarpariello »', 'Sautées avec saucisse et gratin de pommes de terre', '鸡胸「鞋匠」', '香肠与土豆焗')
     }),
     d('sf_m_veal_val', 'Veal scallopini “Valdostana”', 'Prosciutto di Parma and fontina in a wild mushroom–Madeira wine sauce', MAIN, SA, {
-      order: 37, allergens: ['Dairy'],
-      ingredients: 'veal, prosciutto, fontina, wild mushroom, Madeira',
+      order: 37, allergens: ['Gluten', 'Dairy'],
+      ingredients: 'veal, flour, prosciutto, fontina, wild mushroom, Madeira',
       pairRed: PR_BARBERA,
       i18n: ix('Escalope de ternera “Valdostana”', 'Prosciutto di Parma y fontina en salsa de setas y Madeira', 'Escalope de veau « Valdostana »', 'Prosciutto di Parma et fontina, sauce champignons sauvages au madère', '小牛肉片「瓦尔多斯塔纳」', '帕尔玛火腿与冯蒂纳奶酪、蘑菇马德拉酱')
     }),
@@ -322,6 +327,7 @@
     }),
     d('sf_d_formaggio', 'Formaggio', 'Gorgonzola Dolce (Lombardy, cow), Parmigiano Reggiano (Emilia Romagna, cow), Mozzarella di Bufala (Campania, buffalo)', 'Dolce', GM, {
       order: 68, upcharge: 8, allergens: ['Dairy'],
+      voiceKeyword: 'FORMAGGIO', voiceAliases: ['GORGONZOLA', 'PARMIGIANO', 'MOZZARELLA'],
       ingredients: 'Gorgonzola, Parmigiano, buffalo mozzarella',
       pairDessert: PD_PORT,
       i18n: ix('Formaggio', 'Gorgonzola Dolce (Lombardía, vaca), Parmigiano Reggiano (Emilia-Romaña, vaca), Mozzarella di Bufala (Campania, búfala)', 'Formaggio', 'Gorgonzola Dolce (Lombardie, vache), Parmigiano Reggiano (Émilie-Romagne, vache), Mozzarella di Bufala (Campanie, bufflonne)', '奶酪拼盘', '甜 Gorgonzola（伦巴第，牛乳）、帕尔马干酪（艾米利亚－罗马涅，牛乳）、水牛乳鲜奶酪（坎帕尼亚）')
@@ -360,6 +366,8 @@
       cookTime: x.cookTime,
       ingredients: x.ingredients,
       askTemp: x.askTemp,
+      voiceKeyword: x.voiceKeyword || '',
+      voiceAliases: x.voiceAliases || [],
       i18n: x.i18n
     };
   }
@@ -395,6 +403,8 @@
       ingredients: extra.ingredients || '',
       askTemp: extra.askTemp || '',
       headingOnly: !!extra.headingOnly,
+      voiceKeyword: extra.voiceKeyword || '',
+      voiceAliases: extra.voiceAliases || [],
       i18n: extra.i18n || {}
     };
   }
@@ -528,7 +538,9 @@
       moreUrl: moreUrl || '',
       storyUrl: moreUrl || '',
       vintageUrl: vintageSearchUrl(producer, name, vintage),
-      desc: [producer, vintage && vintage !== 'NV' ? vintage : '', region, varietal].filter(Boolean).join(' · ')
+      desc: [producer, vintage && vintage !== 'NV' ? vintage : '', region, varietal].filter(Boolean).join(' · '),
+      voiceKeyword: '',
+      voiceAliases: []
     };
   }
 
@@ -1093,7 +1105,11 @@
 
   function collectById(menu) {
     var map = {};
-    function add(x) { if (x && x.id) map[x.id] = x; }
+    function add(x) {
+      if (!x) return;
+      if (x.id) map[x.id] = x;
+      if (x.dishId && !map[x.dishId]) map[x.dishId] = x;
+    }
     if (!menu) return map;
     (menu.dishes || []).forEach(add);
     (menu.courses || []).forEach(function (c) {
@@ -1134,8 +1150,10 @@
     }
     var seedById = collectById(seed);
     function fill(d) {
-      var s = d && d.id && seedById[d.id];
+      var s = d && ((d.id && seedById[d.id]) || (d.dishId && seedById[d.dishId]));
       if (!d || !s) return;
+      if (s.voiceKeyword && !d.voiceKeyword) d.voiceKeyword = s.voiceKeyword;
+      if (s.voiceAliases && (!d.voiceAliases || !d.voiceAliases.length)) d.voiceAliases = s.voiceAliases.slice();
       if (s.story && !d.story) d.story = s.story;
       if (s.storyUrl && !d.storyUrl) d.storyUrl = s.storyUrl;
       if (s.sourceUrl && !d.sourceUrl) d.sourceUrl = s.sourceUrl;
@@ -1190,6 +1208,50 @@
     return list.filter(function (x) { return x && x.active !== false; });
   }
 
+  var VOICE_SEED = {
+    sf_w_salmon: 'SMOKED', sf_w_zucchini: 'ZUCCHINI', sf_w_shrimp: 'SHERRY',
+    sf_p_rosso: 'ROSSO', sf_p_arugula: 'ARUGULA', sf_p_lobster: 'LOBSTER',
+    sf_p_raviolo: 'RAVIOLO', sf_p_porcini: 'PORCINI', sf_p_agnolotti: 'AGNOLOTTI',
+    sf_p_arrabbiata: 'ARRABBIATA', sf_p_bolognese: 'BOLOGNESE', sf_p_pappardelle: 'PAPPARDELLE',
+    sf_p_linguini: 'PESCATORE', sf_p_fusilli: 'FUSILLI', sf_p_amatriciana: 'RIGATONI',
+    sf_m_sole: 'SOLE', sf_m_scallops: 'SCALLOPS', sf_m_forestiere: 'SALMON',
+    sf_m_zafferano: 'SHRIMP', sf_m_genovese: 'GENOESE', sf_m_pork: 'PORKCHOP',
+    sf_m_chicken: 'CHICKEN', sf_m_veal_val: 'VEAL', sf_m_osso: 'LAMB',
+    sf_m_giambotta: 'FILET', sf_m_reggiano: 'MEDALLIONS', sf_m_duck: 'DUCK',
+    sf_e_sorbet: 'SORBET',
+    sf_d_napoleon: 'NAPOLEON', sf_d_cake: 'FLOURLESS', sf_d_tart: 'RASPBERRY',
+    sf_d_basque: 'CHEESECAKE', sf_d_pistachio_tart: 'BRULEE', sf_d_panino: 'PANINO',
+    sf_d_pineapple: 'PINEAPPLE', sf_d_banana: 'BANANA', sf_d_gelato: 'GELATO',
+    sf_d_formaggio: 'FORMAGGIO',
+    scoop_apple: 'APPLE', scoop_vanilla: 'VANILLA', scoop_caramel: 'CARAMEL',
+    scoop_hazelnut: 'HAZELNUT', scoop_pistachio: 'PISTACHIO', scoop_lemon: 'LEMON',
+    btg_spark_beck: 'CHAMPAGNE', btg_spark_zardetto: 'PROSECCO', btg_spark_concerto: 'LAMBRUSCO',
+    btg_white_walch: 'PINOT BIANCO', btg_white_friulano: 'FRIULANO', btg_white_fiano: 'FIANO',
+    btg_white_hartford: 'CHARDONNAY',
+    btg_red_core: 'AGLIANICO', btg_red_fumanelli: 'VALPOLICELLA', btg_red_planeta: 'MERLOT',
+    btg_lib_sudtirol: 'PINOT NOIR', btg_lib_fizzano: 'CHIANTI', btg_lib_barbera: 'BARBERA',
+    btg_des_spinetta: 'MOSCATO', btg_des_vidal: 'VIDAL', btg_des_riesling: 'RIESLING',
+    btg_des_franc: 'CABERNET',
+    btg_port_bin27: 'RUBY', btg_port_croft: 'CROFT', btg_port_tawny10: 'TAWNY10',
+    btg_port_tawny20: 'TAWNY20'
+  };
+  var VOICE_ALIAS_SEED = { sf_d_formaggio: ['GORGONZOLA', 'PARMIGIANO', 'MOZZARELLA'] };
+  function seedVoiceOn(x) {
+    if (!x) return;
+    var id = x.id || x.dishId;
+    if (id && VOICE_SEED[id] && !x.voiceKeyword) x.voiceKeyword = VOICE_SEED[id];
+    if (id && VOICE_ALIAS_SEED[id] && (!x.voiceAliases || !x.voiceAliases.length)) {
+      x.voiceAliases = VOICE_ALIAS_SEED[id].slice();
+    }
+  }
+  dishes.forEach(seedVoiceOn);
+  tastingCourses.forEach(seedVoiceOn);
+  GELATO_SCOOPS.forEach(seedVoiceOn);
+  winesByGlass.forEach(seedVoiceOn);
+  (prixFixe.courses || []).forEach(function (c) { (c.options || []).forEach(seedVoiceOn); });
+  (prixFixe.courseGroups || []).forEach(function (c) { (c.options || []).forEach(seedVoiceOn); });
+  (prixFixe.dishes || []).forEach(seedVoiceOn);
+
   root.EPICUREAN_SCALINI = {
     version: VERSION,
     dummyPrixFixeIds: ['pf_lunch', 'pf_brunch', 'pf1', 'pf2'],
@@ -1206,4 +1268,5 @@
     mergeMenu: mergeMenu,
     mergeList: mergeList
   };
-})(typeof window !== 'undefined' ? window : this);
+  if (typeof globalThis !== 'undefined') globalThis.EPICUREAN_SCALINI = root.EPICUREAN_SCALINI;
+})(typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : this));

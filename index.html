@@ -281,6 +281,33 @@ body{background:#f3f4f6;color:#111827;font-family:'Inter',-apple-system,sans-ser
 }
 @media(max-width:600px){.k-ticket{flex-basis:84vw;width:84vw}.k-search{width:96px;padding:4px 8px;font-size:.75rem}.k-statusbar{padding:6px 8px;gap:4px;flex-wrap:nowrap;overflow-x:auto}.k-group{gap:4px}.k-chip{padding:4px 9px;font-size:.7rem;white-space:nowrap}.k-chip b{font-size:.85rem}.k-stations{padding:5px 8px}.k-tab{padding:4px 10px;font-size:.72rem}.k-tools{padding:5px 8px;gap:5px;flex-wrap:nowrap;overflow-x:auto}.k-tool{padding:4px 8px;font-size:.68rem;white-space:nowrap}}
 
+
+/* Nov10-b: qty left, seats right, green when fired, compact red allergy */
+.k-item .k-iname{padding-right:2px}
+.k-item .k-warn{display:block;margin:0;font-size:.68rem}
+.k-item .k-txt{display:block;margin:0}
+.k-item .k-iname{overflow-wrap:anywhere}
+.k-item .k-check{margin-left:2px}
+.k-rseats{flex:none;max-width:84px;text-align:right;font-size:.78rem;font-weight:800;color:#111827;line-height:1.15;margin-top:1px}
+.k-rseats i{font-style:normal}.k-rseats i.lady{color:#be185d}
+.k-item.fired{background:#bbf7d0;border-left:4px solid #16a34a;padding-left:4px}
+.k-item.fired .k-seat.qty{background:#15803d}
+.k-item.hold{background:#fffbeb;opacity:1}
+.k-item.hold .k-seat.qty{background:#a16207}
+.k-item.done,.k-sec.done{background:#f3f4f6}
+.k-item.done .k-check{background:#6b7280;border-color:#6b7280}
+.k-item.done .k-iname{color:#6b7280}
+.k-sec.fired,.k-sec.working{background:#f0fdf4}
+.k-crow.fired{background:#bbf7d0;border-left:4px solid #16a34a}
+.k-crow.fired b{color:#14532d}
+.k-crow.held{background:#fffbeb;color:#78716c}
+.k-crow.held b{color:#a16207}
+.k-crow .k-cstate{display:block;font-style:normal;font-size:.6rem;font-weight:700;color:#a16207}
+.k-crow.fired .k-cstate{color:#15803d}
+.k-cleg{padding:4px 10px;font-size:.62rem;color:#6b7280;border-bottom:1px solid #f3f4f6}
+.k-cleg b.g{background:#bbf7d0;padding:0 5px;border-radius:3px;color:#14532d}.k-cleg b.h{background:#fffbeb;padding:0 5px;border-radius:3px;color:#a16207;border:1px solid #fde68a}
+.k-note.allergy{padding:2px 6px;font-size:.72rem}
+.k-hgrid{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start}.k-hticket{max-height:none}.k-hticket .k-tbody{overflow:visible}.k-item.ro{cursor:default;background:#fff}.k-hist{overflow-y:auto}
 </style>
 </head>
 <body>
@@ -704,6 +731,15 @@ function parseMods(list){
   });
   return { allergies:allergies, texts:texts };
 }
+var KEYS={};
+function seedKeys(){ try{ var S=window.EPICUREAN_SCALINI; (function w(o,d){ if(!o||typeof o!=='object'||d>6) return; if(o.name&&o.kitchenKey) KEYS[prepKey(o.name)]=KEYS[prepKey(o.name)]||String(o.kitchenKey); Object.keys(o).forEach(function(k){ if(k!=='i18n') w(o[k],d+1); }); })(S,0); }catch(e){} }
+function dishLabel(name){
+  var n=String(name||''), k=KEYS[prepKey(n)]; var sz=n.match(/\((main|appetizer|app)\s*size\)/i);
+  var base=k||'';
+  if(!base){ var q=n.match(/[\u201C"]([^\u201D"]+)[\u201D"]/); base=q?q[1]:n.replace(/\s*\((main|appetizer|app)\s*size\)\s*$/i,''); }
+  return base+(sz?(/main/i.test(sz[1])?' \u00B7 main':''):'');
+}
+function alLabel(a){ a=String(a||'').toUpperCase(); if(/^GLUTEN(-FREE PASTA)?$/.test(a)||a==='GLUTEN FREE') return 'GLUTEN FREE'; return a+' ALLERGY'; }
 function isGiveaway(label){ return /piccolo|welcome|amuse|bite|entremet|pre-dessert/i.test(String(label||'')); }
 function groupItems(items){
   var groups=[], idx={};
@@ -717,19 +753,22 @@ function groupItems(items){
   groups.forEach(function(g){ g.keys=g.items.map(function(i){ return i.key; }); g.done=g.items.every(function(i){ return i.doneAt; }); g.seats=g.items.map(function(i){ return i.seat==='table'?'T':i.seat; }); });
   return groups;
 }
-function groupRow(g, extraLeft, arrow){
+function seatsHtml(seats){ return seats.map(function(x){ return '<i'+(/A$/.test(String(x))?' class="lady"':'')+'>'+esc(x)+'</i>'; }).join(', '); }
+function groupRow(g, extraLeft, arrow, ro){
   var hold=g.status==='hold';
   var n=g.items.length;
-  // Bar & coffee: quantity on the left, seats after the drink name. Kitchen: seat on the left.
-  var drinks = SCREEN!=='kitchen';
-  var lead = (drinks || n>1) ? '<span class="k-seat qty">'+n+'</span>' : '<span class="k-seat'+(/A$/.test(String(g.items[0].seat))?' lady':'')+'">'+esc(g.seats[0])+'</span>';
-  var warn=g.pm.allergies.map(function(a){ return '<span class="k-warn">▲ '+esc(a)+'</span>'; }).join('');
-  var txt=g.pm.texts.map(function(t){ return '<span class="k-txt">'+esc(t)+'</span>'; }).join('');
-  var seats=(drinks||n>1) ? '<span class="k-seats" style="color:#374151;font-size:.72rem">'+esc(g.seats.join(' · '))+'</span>' : '';
-  var click=hold?'':' data-keys="'+esc(JSON.stringify(g.keys))+'" onclick="toggleGroup(this)"';
-  return '<div class="k-item'+(g.done?' done':'')+(hold?' hold':'')+'"'+click+'>'+lead+
-    '<span class="k-iname">'+esc(g.name)+(g.size?'<span class="k-size">'+esc(g.size)+'</span>':'')+seats+warn+txt+'</span>'+
-    (arrow||'')+(hold?'<span class="k-holdtag">HOLD</span>':'<span class="k-check">'+(g.done?'✓':'')+'</span>')+'</div>';
+  // Same on every screen: count on the left, dish name, seats on the right.
+  var lead='<span class="k-seat qty">'+n+'</span>';
+  var als=[]; g.pm.allergies.forEach(function(a){ var l=alLabel(a); if(als.indexOf(l)<0) als.push(l); });
+  var warn=als.map(function(a){ return '<span class="k-warn">\u25B2 '+esc(a)+'</span>'; }).join('');
+  var low=g.pm.allergies.join(' ').toLowerCase();
+  var txt=g.pm.texts.filter(function(t){ var m=String(t).toLowerCase().match(/^(?:no|without|sans)\s+([a-z \-]+)$/); return !(m && low.indexOf(m[1].trim().split(' ')[0])>=0); }).map(function(t){ return '<span class="k-txt">'+esc(t)+'</span>'; }).join('');
+  var seats='<span class="k-rseats">'+seatsHtml(g.seats)+'</span>';
+  var click=(hold||ro)?'':' data-keys="'+esc(JSON.stringify(g.keys))+'" onclick="toggleGroup(this)"';
+  var nm=SCREEN==='kitchen'?dishLabel(g.name):g.name;
+  return '<div class="k-item'+(ro?' ro':(g.done?' done':(hold?' hold':' fired')))+'"'+click+' title="'+esc(g.name)+'">'+lead+
+    '<span class="k-iname">'+esc(nm)+(g.size?'<span class="k-size">'+esc(g.size)+'</span>':'')+warn+txt+'</span>'+seats+
+    (arrow||'')+(ro?'':(hold?'<span class="k-holdtag">HOLD</span>':'<span class="k-check">'+(g.done?'\u2713':'')+'</span>'))+'</div>';
 }
 function sectionHtml(t, s){
   var doneAll=s.items.length && s.items.every(function(i){ return i.doneAt; });
@@ -748,11 +787,11 @@ function sectionHtml(t, s){
     var done=s.items.every(function(i){ return i.doneAt; });
     var hold=s.items.every(function(i){ return i.status==='hold'; });
     var bySeat={}, order=[];
-    s.items.forEach(function(i){ parseMods(i.mods).allergies.forEach(function(a){ var k=i.seat+'|'+a; if(!bySeat[k]){ bySeat[k]=1; order.push({seat:i.seat==='table'?'T':i.seat, a:a}); } }); });
+    s.items.forEach(function(i){ parseMods(i.mods).allergies.forEach(function(a){ var k=i.seat+'|'+a; if(!bySeat[k]){ bySeat[k]=1; order.push({seat:i.seat==='table'?'T':i.seat, a:alLabel(a)}); } }); });
     var warns=order.map(function(o){ return '<span class="k-warn" style="display:block">▲ '+esc(o.seat)+' '+esc(o.a)+'</span>'; }).join('');
     var arrow='<button type="button" class="k-arrow" onclick="event.stopPropagation();toggleExpand(\''+esc(t.table+'|'+s.label).replace(/'/g,"\\'")+'\')">'+(open?'▴':'▾')+'</button>';
-    body='<div class="k-item'+(done?' done':'')+(hold?' hold':'')+'"'+(hold?'':' data-keys="'+esc(JSON.stringify(allKeys))+'" onclick="toggleGroup(this)"')+'><span class="k-iname">'+(warns||'<span class="k-size" style="margin:0">all seats</span>')+'</span>'+arrow+(hold?'<span class="k-holdtag">HOLD</span>':'<span class="k-check">'+(done?'✓':'')+'</span>')+'</div>';
-    if (open) body+=dishes.map(function(g){ var w=g.pm.allergies.map(function(a){ return ' <span class="k-warn" style="display:inline">▲ '+esc(a)+'</span>'; }).join(''); return '<div class="k-sub"><b>'+g.items.length+'×</b> '+esc(g.name)+w+'</div>'; }).join('');
+    body='<div class="k-item'+(done?' done':(hold?' hold':' fired'))+'"'+(hold?'':' data-keys="'+esc(JSON.stringify(allKeys))+'" onclick="toggleGroup(this)"')+'><span class="k-iname">'+(warns||'<span class="k-size" style="margin:0">all seats</span>')+'</span>'+arrow+(hold?'<span class="k-holdtag">HOLD</span>':'<span class="k-check">'+(done?'✓':'')+'</span>')+'</div>';
+    if (open) body+=dishes.map(function(g){ var w=g.pm.allergies.map(function(a){ return ' <span class="k-warn" style="display:inline">▲ '+esc(alLabel(a))+'</span>'; }).join(''); return '<div class="k-sub"><b>'+g.items.length+'×</b> '+esc(dishLabel(g.name))+w+'</div>'; }).join('');
   } else {
     body=groupItems(s.items).map(function(g){ return groupRow(g); }).join('');
   }
@@ -766,7 +805,7 @@ function tableTitle(id){
 function toggleCounts(){ STATE.showCounts=!STATE.showCounts; render(); }
 function openFiredItems(){
   var out=[];
-  allTickets.forEach(function(t){ t.items.forEach(function(i){ if (i.status==='fired' && !i.doneAt) out.push({t:t, i:i}); }); });
+  allTickets.forEach(function(t){ t.items.forEach(function(i){ if (!i.doneAt) out.push({t:t, i:i}); }); });   // fired AND still on hold: the line sees the whole order
   return out;
 }
 function minTxt(m){ return m>0 ? m+'m' : ''; }
@@ -774,26 +813,29 @@ function countsHtml(){
   var rows=openFiredItems(), byStation={}, order=[];
   rows.forEach(function(r){
     var st=r.i.station||'Expo'; if (normSt(st)==='expo') st='Expo';
-    var g=byStation[st]; if (!g){ g=byStation[st]={name:st, dishes:{}, order:[], n:0, oldest:Infinity}; order.push(g); }
+    var g=byStation[st]; if (!g){ g=byStation[st]={name:st, dishes:{}, order:[], n:0, held:0, oldest:Infinity}; order.push(g); }
     var k=r.i.name.toLowerCase()+'|'+(r.i.size||'');
-    var d=g.dishes[k]; if (!d){ d=g.dishes[k]={name:r.i.name, size:r.i.size, items:[], vars:{}, oldest:Infinity}; g.order.push(d); }
+    var d=g.dishes[k]; if (!d){ d=g.dishes[k]={name:r.i.name, size:r.i.size, items:[], fired:[], held:[], vars:{}, oldest:Infinity}; g.order.push(d); }
     d.items.push(r.i); g.n++;
-    d.oldest=Math.min(d.oldest, r.i.firedAt||Infinity); g.oldest=Math.min(g.oldest, r.i.firedAt||Infinity);
-    var pm=parseMods(r.i.mods), tags=pm.allergies.map(function(a){ return '▲ '+a; }).concat(pm.texts);
+    if (r.i.status==='fired') { d.fired.push(r.i); d.oldest=Math.min(d.oldest, r.i.firedAt||Infinity); g.oldest=Math.min(g.oldest, r.i.firedAt||Infinity); } else { d.held.push(r.i); g.held++; }
+    var pm=parseMods(r.i.mods), tags=pm.allergies.map(alLabel).map(function(a){ return '▲ '+a; });
     tags.forEach(function(x){ d.vars[x]=(d.vars[x]||0)+1; });
   });
   var onlySt = STATE.station!=='All' ? normSt(STATE.station) : '';
   var list=order.filter(function(g){ return onlySt ? normSt(g.name)===onlySt : normSt(g.name)!=='expo'; });
   list.sort(function(a,b){ return KITCHEN_STATIONS.indexOf(a.name)-KITCHEN_STATIONS.indexOf(b.name); });
-  var h='<aside class="k-counts"><div class="k-ch">Line counts</div>';
-  if (!list.length) h+='<div class="k-cempty">Nothing fired</div>';
+  var h='<aside class="k-counts"><div class="k-ch">Line counts</div><div class="k-cleg"><b class="g">green</b> fired · <b class="h">yellow</b> sent, not fired yet</div>';
+  if (!list.length) h+='<div class="k-cempty">No orders</div>';
   list.forEach(function(g){
     var longest=0; g.order.forEach(function(d){ longest=Math.max(longest, prepMin(d.name)); });
-    h+='<div class="k-cst"><span>'+esc(g.name)+'</span><span>'+g.n+(g.n===1?' plate':' plates')+(longest?' · '+longest+'m':'')+(g.oldest!==Infinity?' · wait '+ago(g.oldest):'')+'</span></div>';
-    g.order.sort(function(a,b){ return a.oldest-b.oldest; }).forEach(function(d){
-      var pm=prepMin(d.name), keys=d.items.map(function(i){ return i.key; });
+    var nf=g.n-g.held;
+    h+='<div class="k-cst"><span>'+esc(g.name)+'</span><span>'+g.n+(g.n===1?' plate':' plates')+(g.held?' ('+nf+' fired)':'')+(longest?' · '+longest+'m':'')+(g.oldest!==Infinity?' · wait '+ago(g.oldest):'')+'</span></div>';
+    g.order.sort(function(a,b){ return (b.fired.length>0)-(a.fired.length>0) || a.oldest-b.oldest || a.name.localeCompare(b.name); }).forEach(function(d){
+      var pm=prepMin(d.name), keys=d.fired.map(function(i){ return i.key; });
       var vars=Object.keys(d.vars).map(function(x){ return d.vars[x]+' '+x; }).join(' · ');
-      h+='<div class="k-crow" data-keys="'+esc(JSON.stringify(keys))+'" onclick="toggleGroup(this)"><b>'+d.items.length+'×</b><span class="k-cname">'+esc(d.name)+(d.size?' <i>'+esc(d.size)+'</i>':'')+(vars?'<em>'+esc(vars)+'</em>':'')+'</span><span class="k-cmin">'+minTxt(pm)+'</span></div>';
+      var cls=d.fired.length?'fired':'held';
+      var state=d.fired.length ? (d.held.length ? d.fired.length+' fired · '+d.held.length+' not fired yet' : 'fired') : 'not fired yet';
+      h+='<div class="k-crow '+cls+'"'+(keys.length?' data-keys="'+esc(JSON.stringify(keys))+'" onclick="toggleGroup(this)"':'')+'><b>'+d.items.length+'×</b><span class="k-cname">'+esc(SCREEN==='kitchen'?dishLabel(d.name):d.name)+(d.size?' <i>'+esc(d.size)+'</i>':'')+(vars?'<em>'+esc(vars)+'</em>':'')+'<span class="k-cstate">'+esc(state)+'</span></span><span class="k-cmin">'+minTxt(pm)+'</span></div>';
     });
   });
   return h+'</aside>';
@@ -830,7 +872,16 @@ function ticketHtml(t){
   var collapsed = STATE.collapsed[id]!==undefined ? STATE.collapsed[id] : (t.status==='ready');
   var age=t.oldestOpen!==Infinity?Math.floor((Date.now()-t.oldestOpen)/60000):0;
   var ageCls=t.status==='ready'||t.status==='hold'?'':(age>=15?' late':(age>=10?' warn':''));
-  var notes=t.notes.map(function(n){ return '<div class="k-note'+(n.allergy?' allergy':'')+'">'+(n.seat?'<b>'+esc(n.seat)+'</b> ':'')+esc(n.text)+'</div>'; }).join('');
+  var notes=t.notes.map(function(n){
+    if (n.allergy) {
+      var seat=String(n.seat||'').replace(/^seat\s*/i,'');
+      var rowHas=t.items.some(function(i){ return String(i.seat)===seat && parseMods(i.mods).allergies.length; });
+      if (rowHas) return '';
+      var al=[]; String(n.text).replace(/\(([^)]+)\)/g,function(_,x){ x.split(/\s*,\s*/).forEach(function(a){ if(a && al.indexOf(a.toUpperCase())<0) al.push(a.toUpperCase()); }); });
+      if (al.length) return '<div class="k-note allergy"><b>'+esc(seat)+'</b> '+al.map(function(a){ return '\u25B2 '+esc(alLabel(a)); }).join(' ')+'</div>';
+    }
+    return '<div class="k-note'+(n.allergy?' allergy':'')+'">'+(n.seat?'<b>'+esc(n.seat)+'</b> ':'')+esc(n.text)+'</div>';
+  }).join('');
   var head='<div class="k-bar '+t.status+'"></div>'+
     '<div class="k-head" onclick="toggleCollapse(\''+id+'\')"><span class="k-table">'+esc(tableTitle(id))+'</span>'+
     '<span class="k-meta">'+esc(t.server||'')+'</span>'+
@@ -878,14 +929,20 @@ function updateCount(vis){
 }
 function historyHtml(){
   var q=STATE.search.toLowerCase();
-  var rows=HIST.filter(function(h){ return !q || ('t'+h.table).toLowerCase().indexOf(q)>=0; }).map(function(h,i){
-    var secs={}; h.items.forEach(function(it){ (secs[it.label]=secs[it.label]||[]).push(it); });
+  var cards=HIST.filter(function(h){ return !q || ('t'+h.table).toLowerCase().indexOf(q)>=0; }).map(function(h){
+    var secs={}; h.items.forEach(function(it){ (secs[it.label||'Kitchen']=secs[it.label||'Kitchen']||[]).push(it); });
     var body=Object.keys(secs).sort(function(a,b){ return labelRank(a)-labelRank(b); }).map(function(l){
-      return '<div class="k-hsec"><b>'+esc(l)+'</b> '+secs[l].map(function(it){ return '<span class="k-hit">'+esc(it.seat==='table'?'':it.seat+' ')+esc(it.name)+(it.size?' '+esc(it.size):'')+(it.doneAt?'':' <em>(not marked out)</em>')+'</span>'; }).join('')+'</div>';
+      var its=secs[l], fired=its.map(function(i){ return i.firedAt||0; }).filter(Boolean), outs=its.map(function(i){ return i.doneAt||0; }).filter(Boolean);
+      var tm=(fired.length&&outs.length)?'<span class="k-times">'+clock12(Math.min.apply(null,fired))+' \u2192 '+clock12(Math.max.apply(null,outs))+' \u00B7 '+Math.max(0,Math.round((Math.max.apply(null,outs)-Math.min.apply(null,fired))/60000))+'m</span>':'';
+      its.sort(function(a,b){ return seatRank(a.seat)-seatRank(b.seat) || String(a.name).localeCompare(String(b.name)); });
+      return '<div class="k-sec done"><div class="k-sechead"><span class="k-seclabel">'+esc(l)+'</span>'+tm+'</div>'+groupItems(its).map(function(g){ return groupRow(g,null,null,true); }).join('')+'</div>';
     }).join('');
-    return '<div class="k-hrow"><div class="k-hhead"><span class="k-table">T'+esc(h.table)+'</span><span class="k-meta">'+esc(h.server||'')+' · closed '+clock12(h.closedAt)+' · '+new Date(h.closedAt).toLocaleDateString()+(h.how==='auto'?' · auto-archived':'')+'</span><button class="k-btn ghost sm" onclick="recall('+HIST.indexOf(h)+')">Bring back</button></div>'+body+'</div>';
+    var rec=h.items.length ? Math.min.apply(null,h.items.map(function(i){ return i.receivedAt||Infinity; })) : 0;
+    return '<div class="k-ticket k-hticket"><div class="k-bar ready"></div><div class="k-head" style="cursor:default"><span class="k-table">'+esc(tableTitle(h.table))+'</span><span class="k-meta">'+esc(h.server||'')+'</span></div>'+
+      '<div class="k-trow"><span>'+(rec&&rec!==Infinity?'in '+clock12(rec):'')+'</span><span>closed '+clock12(h.closedAt)+' \u00B7 '+new Date(h.closedAt).toLocaleDateString([], {month:'short',day:'numeric'})+(h.how==='auto'?' \u00B7 auto':'')+'</span></div>'+
+      '<div class="k-tbody">'+body+'</div><div class="k-foot"><button class="k-btn ghost" onclick="recall('+HIST.indexOf(h)+')">Bring back</button></div></div>';
   }).join('');
-  return '<div class="k-hist"><h3>Completed orders <small>(last '+HISTORY_DAYS+' days, kept on this screen)</small></h3>'+(rows||'<p class="k-empty-line">Nothing completed yet.</p>')+'</div>';
+  return '<div class="k-hist"><h3>Completed orders <small>(last '+HISTORY_DAYS+' days, kept on this screen)</small></h3>'+(cards?'<div class="k-hgrid">'+cards+'</div>':'<p class="k-empty-line">Nothing completed yet.</p>')+'</div>';
 }
 
 // ─── Actions ────────────────────────────────────────────────────
@@ -995,6 +1052,8 @@ function ticketText(t, onlySection){
 }
 // Runner slips: BOH (boh_shared/print_settings) says how many copies and whether ladies print first.
 var PREP=lsGet('kds_prep',{});
+seedKeys();
+(function(){ var k=lsGet('kds_keys',{}); Object.keys(k).forEach(function(x){ KEYS[x]=k[x]; }); })();
 function prepKey(n){ return String(n||'').toLowerCase().replace(/\s*\((main|appetizer|app)\s*size\)\s*$/,'').replace(/\s+[-·]\s+(rare|medium rare|medium|medium well|well done|well)\s*$/,'').replace(/[^a-z0-9]+/g,' ').trim(); }
 function prepMin(n){ var v=Number(PREP[prepKey(n)]); return v>0?v:0; }
 var PRINTSET=lsGet('kds_printset',{copies:1, ladiesFirst:true});
@@ -1006,9 +1065,9 @@ function slipRows(groups){
   var seatW=0; groups.forEach(function(g){ g._s=g.seats.join(', '); seatW=Math.max(seatW, Math.min(g._s.length,14)); });
   var nameW=Math.max(10, SLIP_W-3-seatW-1), lines=[];
   groups.forEach(function(g){
-    var nm=wrapTxt(g.name+(g.size?' ('+g.size+')':''), nameW);
+    var nm=wrapTxt((SCREEN==='kitchen'?dishLabel(g.name):g.name)+(g.size?' ('+g.size+')':''), nameW);
     var st=wrapTxt(g._s, Math.max(seatW,1));
-    var extra=[]; g.pm.allergies.forEach(function(a){ extra.push('! '+(/PASTA|GLUTEN-FREE/.test(a)?'':'ALLERGY: ')+a); }); g.pm.texts.forEach(function(x){ wrapTxt(x,nameW-1).forEach(function(w){ extra.push(w); }); });
+    var extra=[]; var lowA=g.pm.allergies.join(' ').toLowerCase(), seenL={}; g.pm.allergies.forEach(function(a){ var l=alLabel(a); if(!seenL[l]){ seenL[l]=1; extra.push('!! '+l); } }); g.pm.texts.filter(function(t){ var m=String(t).toLowerCase().match(/^(?:no|without|sans)\s+([a-z \-]+)$/); return !(m && lowA.indexOf(m[1].trim().split(' ')[0])>=0); }).forEach(function(x){ wrapTxt(x,nameW-1).forEach(function(w){ extra.push(w); }); });
     var rows=Math.max(nm.length, st.length);
     for (var r=0;r<rows;r++) lines.push((r===0?String(g.items.length).padStart(2):'  ')+' '+(nm[r]||'').padEnd(nameW)+' '+(st[r]||'').padStart(seatW));
     extra.forEach(function(x){ lines.push('   '+x); });
@@ -1022,7 +1081,7 @@ function runnerSlip(t, label){
   var fired=sec.items.filter(function(i){ return SCREEN!=='kitchen' || i.status==='fired'; });
   if (!fired.length) return '';
   var head='TABLE '+t.table+'  '+label.toUpperCase()+'\n'+(t.server?t.server+' · ':'')+(t.covers?t.covers+' covers · ':'')+'fired '+clock12(sec.firedAt||Date.now());
-  var notes=t.notes.map(function(n){ return (n.allergy?'!! ':'** ')+(n.seat?n.seat+': ':'')+n.text; });
+  var notes=t.notes.filter(function(n){ if(!n.allergy) return true; var seat=String(n.seat||''); return !t.items.some(function(i){ return String(i.seat)===seat && parseMods(i.mods).allergies.length; }); }).map(function(n){ return (n.allergy?'!! ':'** ')+(n.seat?n.seat+': ':'')+n.text.replace(/\s+\u2014\s*can it be made without\?.*$/i,''); });
   var blocks=[];
   if (PRINTSET.ladiesFirst!==false && t.covers>=4) {
     var ladies=fired.filter(function(i){ return isLadySeat(i.seat); });
@@ -1106,7 +1165,7 @@ function startKDS() {
   document.body.classList.add('screen-'+SCREEN);
   render();
   if (fbReady) fbDb.collection('boh_shared').doc('prep_times').onSnapshot(function(doc){
-    var d=doc.exists&&doc.data()||null; PREP=(d&&d.times)||{}; lsSet('kds_prep',PREP); render();
+    var d=doc.exists&&doc.data()||null; PREP=(d&&d.times)||{}; lsSet('kds_prep',PREP); if (d&&d.keys){ Object.keys(d.keys).forEach(function(k){ if(d.keys[k]) KEYS[k]=d.keys[k]; }); lsSet('kds_keys',d.keys); } render();
   }, function(){});
   if (fbReady) fbDb.collection('boh_shared').doc('print_settings').onSnapshot(function(doc){
     var d=doc.exists&&doc.data()||null; if (d){ PRINTSET={copies:Number(d.copies)||1, ladiesFirst:d.ladiesFirst!==false}; lsSet('kds_printset',PRINTSET); }
