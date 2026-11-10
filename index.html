@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#f3f4f6">
-<title>Epicurean Kitchen Display</title><!-- build Nov9-c -->
+<title>Epicurean Kitchen Display</title><!-- build Nov9-d -->
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-auth-compat.js"></script>
@@ -1007,7 +1007,8 @@ function slipLine(it){
 // One runner slip for a fired course: ladies' dishes on one piece, a cut line, then the gentlemen's below.
 function runnerSlip(t, label){
   var sec=t.sections.filter(function(x){ return x.label===label; })[0]; if (!sec) return '';
-  var fired=sec.items.filter(function(i){ return i.status==='fired'; });
+  // Kitchen prints a course only once it is fired; bar and coffee print the moment the order arrives.
+  var fired=sec.items.filter(function(i){ return SCREEN!=='kitchen' || i.status==='fired'; });
   if (!fired.length) return '';
   var head='TABLE '+t.table+'  '+label.toUpperCase()+'\n'+(t.server?t.server+' · ':'')+(t.covers?t.covers+' covers · ':'')+'fired '+clock12(sec.firedAt||Date.now());
   var notes=t.notes.map(function(n){ return (n.allergy?'!! ':'** ')+(n.seat?n.seat+': ':'')+n.text; });
@@ -1048,11 +1049,11 @@ function printTicket(id){
 }
 function toggleAutoPrint(){ AUTOPRINT=!AUTOPRINT; lsSet('kds_autoprint_'+P,AUTOPRINT); render(); }
 function maybeAutoPrint(tickets){
-  if (!AUTOPRINT) { tickets.forEach(function(t){ t.items.forEach(function(i){ if (i.status==='fired') PRINTED[i.key]=1; }); }); lsSet('kds_printed_'+P,PRINTED); return; }
+  if (!AUTOPRINT) { tickets.forEach(function(t){ t.items.forEach(function(i){ if (SCREEN!=='kitchen' || i.status==='fired') PRINTED[i.key]=1; }); }); lsSet('kds_printed_'+P,PRINTED); return; }
   var out=[];
   tickets.forEach(function(t){
     var fresh={};
-    t.items.forEach(function(i){ if (i.status==='fired' && !PRINTED[i.key]) { PRINTED[i.key]=1; fresh[i.label]=1; } });
+    t.items.forEach(function(i){ if ((SCREEN!=='kitchen' || i.status==='fired') && !PRINTED[i.key]) { PRINTED[i.key]=1; fresh[i.label]=1; } });
     Object.keys(fresh).forEach(function(l){ var sl=runnerSlip(t,l); if (sl) slipCopies(sl).forEach(function(x){ out.push(x); }); });
   });
   lsSet('kds_printed_'+P,PRINTED);
